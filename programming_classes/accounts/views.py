@@ -1,0 +1,48 @@
+from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .forms import RegisterForm, RoleForm
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import login, authenticate, logout
+
+
+def register(request):
+	if request.method == "POST":
+		form = RegisterForm(request.POST)
+		role_form = RoleForm(request.POST)
+		if form.is_valid() and role_form.is_valid():
+			user = form.save()
+			role = role_form.save(commit=False)
+			role.user = user
+			role.save()
+			login(request, user)
+			messages.success(request, "Registration successful." )
+			return redirect("main:homepage")
+		messages.error(request, "Unsuccessful registration. Invalid information.")
+	form = RegisterForm()
+	role_form = RoleForm()
+	return render (request=request, template_name="main/register.html", context={"role_form": role_form, "register_form":form})
+
+def login_request(request):
+	if request.method == "POST":
+		form = AuthenticationForm(request, data=request.POST)
+		if form.is_valid():
+			username = form.cleaned_data.get('username')
+			password = form.cleaned_data.get('password')
+			user = authenticate(username=username, password=password)
+			if user is not None:
+				login(request, user)
+				messages.info(request, f"You are now logged in as {username}.")
+				return redirect("main:homepage")
+			else:
+				messages.error(request,"Invalid username or password.")
+		else:
+			messages.error(request,"Invalid username or password.")
+	form = AuthenticationForm()
+	return render(request=request, template_name="main/login.html", context={"login_form":form})
+
+
+def logout_request(request):
+	logout(request)
+	messages.info(request, "You have successfully logged out.") 
+	return redirect("main:welcome")
