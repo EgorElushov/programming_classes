@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+{% if course %}Materials for {{ course.title }}{% else %}All Materials{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">
+            {% if course %}
+            Course Materials for {{ course.title }}
+            {% else %}
+            All Course Materials
+            {% endif %}
+        </h1>
+        {% if is_course_creator %}
+        <div>
+            <a href="{% url 'upload-material' course.course_id %}" class="btn btn-primary me-2">
+                <i class="bi bi-upload"></i> Upload Material
+            </a>
+            <a href="{% url 'bulk-upload-materials' course.course_id %}" class="btn btn-outline-primary">
+                <i class="bi bi-cloud-upload"></i> Bulk Upload
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Filters</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-6">
+                    <input type="text" name="search" class="form-control" placeholder="Search materials..." value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="file_type" class="form-select">
+                        <option value="">All File Types</option>
+                        {% for type_value, type_label in file_types %}
+                        <option value="{{ type_value }}" {% if request.GET.file_type == type_value %}selected{% endif %}>
+                            {{ type_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-secondary w-100">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Material List -->
+    {% if materials %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for material in materials %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    {% if material.file_type == 'document' %}
+                    <i class="bi bi-file-earmark-text fs-4"></i>
+                    {% elif material.file_type == 'video' %}
+                    <i class="bi bi-film fs-4"></i>
+                    {% elif material.file_type == 'image' %}
+                    <i class="bi bi-image fs-4"></i>
+                    {% elif material.file_type == 'audio' %}
+                    <i class="bi bi-music-note-beamed fs-4"></i>
+                    {% elif material.file_type == 'archive' %}
+                    <i class="bi bi-file-earmark-zip fs-4"></i>
+                    {% else %}
+                    <i class="bi bi-file-earmark fs-4"></i>
+                    {% endif %}
+                    <span class="badge bg-primary">{{ material.file_extension|upper }}</span>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ material.title }}</h5>
+                    {% if material.description %}
+                    <p class="card-text">{{ material.description|truncatechars:100 }}</p>
+                    {% endif %}
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ material.uploaded_by.username }}
+                        </small>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> {{ material.upload_date|date:"M d, Y" }}
+                        </small>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'material-detail' material.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                        <a href="{% url 'download-material' material.id %}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-download"></i> Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.file_type %}&file_type={{ request.GET.file_type }}{% endif %}">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.file_type %}&file_type={{ request.GET.file_type }}{% endif %}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.file_type %}&file_type={{ request.GET.file_type }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.file_type %}&file_type={{ request.GET.file_type }}{% endif %}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.file_type %}&file_type={{ request.GET.file_type }}{% endif %}">Last</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No materials found matching your criteria.
+    </div>
+    {% endif %}
+
+    {% if course %}
+    <div class="mt-4">
+        <a href="{% url 'course-detail' course.course_id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Course
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

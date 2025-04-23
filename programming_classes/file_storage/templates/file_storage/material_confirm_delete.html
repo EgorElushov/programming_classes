@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Delete Material{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h1 class="h3 mb-0">Confirm Deletion</h1>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Are you sure you want to delete the material "{{ material.title }}"?</p>
+                    <p class="text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        This action cannot be undone. The file will be permanently deleted from the server.
+                    </p>
+                    
+                    <div class="mb-4">
+                        <h5>Material Information</h5>
+                        <ul>
+                            <li><strong>Title:</strong> {{ material.title }}</li>
+                            <li><strong>Type:</strong> {{ material.file_type|title }}</li>
+                            <li><strong>Course:</strong> {{ material.course.title }}</li>
+                            <li><strong>Uploaded:</strong> {{ material.upload_date|date:"F d, Y" }}</li>
+                        </ul>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'material-detail' material.id %}" class="btn btn-secondary me-md-2">Cancel</a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash me-2"></i>Delete Material
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

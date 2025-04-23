@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Material Statistics - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Material Statistics for {{ course.title }}</h1>
+        <a href="{% url 'course-detail' course.course_id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Course
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Materials</h5>
+                    <p class="display-4">{{ total_materials }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Storage</h5>
+                    <p class="display-4">
+                        {% if total_size < 1048576 %}
+                        {{ total_size|divisibleby:1024|floatformat:1 }} KB
+                        {% else %}
+                        {{ total_size|divisibleby:1048576|floatformat:1 }} MB
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Documents</h5>
+                    <p class="display-4">
+                        {% with doc_count=file_type_counts|selectattr:"file_type","equalto","document"|first %}
+                        {{ doc_count.count|default:0 }}
+                        {% endwith %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Media Files</h5>
+                    <p class="display-4">
+                        {% with media_count=file_type_counts|selectattr:"file_type","in",["video","audio","image"]|sum:"count" %}
+                        {{ media_count|default:0 }}
+                        {% endwith %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- File Type Breakdown -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Materials by Type</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="fileTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Materials by Uploader -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Materials by Uploader</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Uploader</th>
+                                    <th>Materials</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for uploader in materials_by_uploader %}
+                                <tr>
+                                    <td>{{ uploader.uploaded_by__username }}</td>
+                                    <td>{{ uploader.count }}</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar" role="progressbar" 
+                                                style="width: {{ uploader.count|multiply:100|divide:total_materials }}%;" 
+                                                aria-valuenow="{{ uploader.count }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="{{ total_materials }}">
+                                                {{ uploader.count|multiply:100|divide:total_materials|floatformat:1 }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Uploads -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Recent Uploads</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Uploader</th>
+                            <th>Date</th>
+                            <th>Size</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for material in recent_uploads %}
+                        <tr>
+                            <td>{{ material.title }}</td>
+                            <td>
+                                {% if material.file_type == 'document' %}
+                                <i class="bi bi-file-earmark-text text-primary"></i> Document
+                                {% elif material.file_type == 'video' %}
+                                <i class="bi bi-film text-danger"></i> Video
+                                {% elif material.file_type == 'image' %}
+                                <i class="bi bi-image text-success"></i> Image
+                                {% elif material.file_type == 'audio' %}
+                                <i class="bi bi-music-note-beamed text-info"></i> Audio
+                                {% else %}
+                                <i class="bi bi-file-earmark"></i> {{ material.file_type|title }}
+                                {% endif %}
+                            </td>
+                            <td>{{ material.uploaded_by.username }}</td>
+                            <td>{{ material.upload_date|date:"M d, Y" }}</td>
+                            <td>
+                                {% if material.file_size < 1024 %}
+                                {{ material.file_size }} bytes
+                                {% elif material.file_size < 1048576 %}
+                                {{ material.file_size|divisibleby:1024|floatformat:1 }} KB
+                                {% else %}
+                                {{ material.file_size|divisibleby:1048576|floatformat:1 }} MB
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'material-detail' material.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'download-material' material.id %}" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js for visualization -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // File Type Chart
+        var fileTypeCtx = document.getElementById('fileTypeChart').getContext('2d');
+        var fileTypeData = {
+            labels: [
+                {% for type_count in file_type_counts %}
+                '{{ type_count.file_type|title }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for type_count in file_type_counts %}
+                    {{ type_count.count }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#007bff',  // Primary blue
+                    '#dc3545',  // Danger red
+                    '#28a745',  // Success green
+                    '#17a2b8',  // Info blue
+                    '#ffc107',  // Warning yellow
+                    '#6c757d',  // Secondary gray
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        var fileTypeChart = new Chart(fileTypeCtx, {
+            type: 'doughnut',
+            data: fileTypeData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Material Types Distribution'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

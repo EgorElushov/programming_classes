@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Посылка #{{ submission.submission_id }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Submission Details -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h1 class="h2 mb-0">Посылка #{{ submission.submission_id }}</h1>
+                    {% if submission.status == 'accepted' %}
+                    <span class="badge bg-success">Принята</span>
+                    {% elif submission.status == 'pending' %}
+                    <span class="badge bg-info">Ожидает</span>
+                    {% else %}
+                    <span class="badge bg-danger">Отклонена</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h5>Задача</h5>
+                            <p>
+                                <a href="{% url 'problem-detail' submission.problem.problem_id %}">
+                                    {{ submission.problem.title }}
+                                </a>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>От</h5>
+                            <p>{{ submission.user.username }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h5>Сдано в</h5>
+                            <p>{{ submission.submitted_at|date:"F d, Y H:i:s" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Контест</h5>
+                            <p>
+                                {% if problem.competition.title %}
+                                <a href="{% url 'competition-detail' problem.competition.id %}">
+                                    {{ problem.competition.title }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">Не является частью контеста</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <h5>Решение</h5>
+                    <div class="bg-light p-3 rounded">
+                        <pre><code class="language-python">{{ submission.code }}</code></pre>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    {% if can_manage %}
+                    <form method="post" action="{% url 'update-submission-status' submission.submission_id %}" class="d-inline">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <select name="status" class="form-select">
+                                <option value="pending" {% if submission.status == 'pending' %}selected{% endif %}>Ожидает</option>
+                                <option value="accepted" {% if submission.status == 'accepted' %}selected{% endif %}>Принято</option>
+                                <option value="rejected" {% if submission.status == 'rejected' %}selected{% endif %}>Отклонено</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary">Обновить статус</button>
+                        </div>
+                    </form>
+                    {% endif %}
+                    
+                    <a href="{% url 'problem-detail' submission.problem.problem_id %}" class="btn btn-outline-secondary mt-2">
+                        <i class="bi bi-arrow-left"></i> Назад к задаче
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Test Results -->
+            {% if test_results %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Результат тестов</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Статус</th>
+                                    <th>Время</th>
+                                    <th>Память</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in test_results %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        {% if result.status == 'accepted' %}
+                                        <span class="text-success"><i class="bi bi-check-circle"></i> Корректно</span>
+                                        {% elif result.status == 'wrong_answer' %}
+                                        <span class="text-danger"><i class="bi bi-x-circle"></i> Неправильный ответ</span>
+                                        {% elif result.status == 'time_limit_exceeded' %}
+                                        <span class="text-warning"><i class="bi bi-hourglass"></i> Превышено время</span>
+                                        {% elif result.status == 'memory_limit_exceeded' %}
+                                        <span class="text-warning"><i class="bi bi-exclamation-triangle"></i> Превышена память</span>
+                                        {% elif result.status == 'runtime_error' %}
+                                        <span class="text-danger"><i class="bi bi-bug"></i> Runtime Error</span>
+                                        {% else %}
+                                        <span class="text-secondary">{{ result.status|title }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ result.execution_time|default:"-" }} ms</td>
+                                    <td>{{ result.memory_used|default:"-" }} KB</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Информация о посылке</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6>Status</h6>
+                        {% if submission.status == 'accepted' %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> Принята
+                        </div>
+                        {% elif submission.status == 'pending' %}
+                        <div class="alert alert-info">
+                            <i class="bi bi-hourglass"></i> Ожидает
+                            <div class="spinner-border spinner-border-sm text-info" role="status">
+                                <span class="visually-hidden">Загрузка...</span>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-x-circle"></i> Отклонена
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if submission.execution_time %}
+                    <div class="mb-3">
+                        <h6>Время выполнения</h6>
+                        <p>{{ submission.execution_time }} ms</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if submission.memory_used %}
+                    <div class="mb-3">
+                        <h6>Памяти использовано</h6>
+                        <p>{{ submission.memory_used }} KB</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- User's Other Submissions -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Иные решения</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for other_submission in user.submissions.all|slice:":5" %}
+                        {% if other_submission.submission_id != submission.submission_id %}
+                        <a href="{% url 'submission-detail' other_submission.submission_id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    {% if other_submission.status == 'accepted' %}
+                                    <span class="text-success"><i class="bi bi-check-circle"></i></span>
+                                    {% elif other_submission.status == 'pending' %}
+                                    <span class="text-info"><i class="bi bi-hourglass"></i></span>
+                                    {% else %}
+                                    <span class="text-danger"><i class="bi bi-x-circle"></i></span>
+                                    {% endif %}
+                                    {{ other_submission.problem.title|truncatechars:30 }}
+                                </h6>
+                                <small>{{ other_submission.submitted_at|timesince }} назад</small>
+                            </div>
+                        </a>
+                        {% endif %}
+                        {% empty %}
+                        <div class="list-group-item">
+                            <p class="mb-0">Иных решений не найдено.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'user-submissions' %}" class="btn btn-outline-primary btn-sm">
+                        Просмотр всех решений
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add syntax highlighting -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/styles/atom-one-light.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.5.1/highlight.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        hljs.highlightAll();
+    });
+</script>
+
+<!-- AJAX to check status for pending submissions -->
+{% if submission.status == 'pending' %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function checkSubmissionStatus() {
+            fetch('{% url "api-check-submission-status" submission.submission_id %}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'pending') {
+                        window.location.reload();
+                    } else {
+                        setTimeout(checkSubmissionStatus, 2000);
+                    }
+                });
+        }
+        
+        setTimeout(checkSubmissionStatus, 2000);
+    });
+</script>
+{% endif %}
+{% endblock %}

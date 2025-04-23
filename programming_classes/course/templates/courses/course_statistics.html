@@ -1,0 +1,404 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Статистика - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Курс</h1>
+        <a href="{% url 'course-detail' course.course_id %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Назад к курсу
+        </a>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">{{ course.title }}</h2>
+        </div>
+        <div class="card-body">
+            <p>{{ course.description|truncatewords:50 }}</p>
+            <div class="d-flex justify-content-between">
+                <p class="mb-0">
+                    <i class="bi bi-person"></i> Создатель: {{ course.created_by.username }}
+                </p>
+                <p class="mb-0">
+                    <i class="bi bi-people"></i> {{ total_enrollments }} студентов {{ total_enrollments|pluralize }}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Overview -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h3 class="card-title">Всего записей</h3>
+                    <p class="display-4">{{ total_enrollments }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <h3 class="card-title">Материалов</h3>
+                    <p class="display-4">{{ material_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h3 class="card-title">Типов материалов</h3>
+                    <p class="display-4">{{ material_types|length }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Enrollment Trends -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0">Зачисления</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="enrollmentTrendChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Material Types -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0">Типы материалов</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="materialTypesChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detailed Statistics -->
+    <div class="row">
+        <!-- Enrollment Details -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0">Информация о регистрации</h3>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Месяц</th>
+                                    <th>Новые участники</th>
+                                    <th>Статистика</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month in enrollment_trend %}
+                                <tr>
+                                    <td>{{ month.month|date:"F Y" }}</td>
+                                    <td>{{ month.count }}</td>
+                                    <td>
+                                        {% if forloop.counter0 > 0 %}
+                                            {% with prev_count=enrollment_trend|index:forloop.counter0|subtract:1|get:"count" %}
+                                                {% if prev_count > 0 %}
+                                                    {% with growth=month.count|subtract:prev_count|multiply:100|divide:prev_count %}
+                                                        {% if growth > 0 %}
+                                                            <span class="text-success">
+                                                                <i class="bi bi-arrow-up"></i> {{ growth|floatformat:1 }}%
+                                                            </span>
+                                                        {% elif growth < 0 %}
+                                                            <span class="text-danger">
+                                                                <i class="bi bi-arrow-down"></i> {{ growth|abs|floatformat:1 }}%
+                                                            </span>
+                                                        {% else %}
+                                                            <span class="text-muted">0%</span>
+                                                        {% endif %}
+                                                    {% endwith %}
+                                                {% else %}
+                                                    <span class="text-success">
+                                                        <i class="bi bi-arrow-up"></i> New
+                                                    </span>
+                                                {% endif %}
+                                            {% endwith %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">Данные о регистрации отсутствуют</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Material Details -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0">Детали материалов</h3>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Тип</th>
+                                    <th>количество</th>
+                                    <th>Процент</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for type in material_types %}
+                                <tr>
+                                    <td>
+                                        {% if type.file_type == 'document' %}
+                                            <i class="bi bi-file-earmark-text text-primary"></i> Документов
+                                        {% elif type.file_type == 'video' %}
+                                            <i class="bi bi-film text-danger"></i> Видео
+                                        {% elif type.file_type == 'image' %}
+                                            <i class="bi bi-image text-success"></i> Изображений
+                                        {% elif type.file_type == 'audio' %}
+                                            <i class="bi bi-music-note-beamed text-info"></i> Аудио
+                                        {% elif type.file_type == 'archive' %}
+                                            <i class="bi bi-file-earmark-zip text-warning"></i> Архивов
+                                        {% else %}
+                                            <i class="bi bi-file-earmark text-secondary"></i> {{ type.file_type|title }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ type.count }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                                <div class="progress-bar" role="progressbar" 
+                                                    style="width: {{ type.count|multiply:100|divide:material_count }}%;" 
+                                                    aria-valuenow="{{ type.count }}" 
+                                                    aria-valuemin="0" 
+                                                    aria-valuemax="{{ material_count }}">
+                                                </div>
+                                            </div>
+                                            <span>{{ type.count|multiply:100|divide:material_count|floatformat:1 }}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">Нет доступных материалов</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Engagement Overview -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h3 class="h5 mb-0">Краткое описание взаимодействия</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Ключевые идеи</h5>
+                    <ul>
+                        <li>CТекущая запись: <strong>{{ total_enrollments }} студентов</strong></li>
+                        <li>Доступные материалы: <strong>{{ material_count }} ресурсов</strong></li>
+                        {% if enrollment_trend %}
+                        <li>
+                            Месяц максимального набора: 
+                            <strong>
+                                {% with max_month=enrollment_trend|dictsortreversed:'count'|first %}
+                                    {{ max_month.month|date:'F Y' }} ({{ max_month.count }} enrollments)
+                                {% endwith %}
+                            </strong>
+                        </li>
+                        {% endif %}
+                        {% if material_types %}
+                        <li>
+                            Наиболее распространенный тип материалов:
+                            <strong>
+                                {% with most_common=material_types|dictsortreversed:'count'|first %}
+                                    {% if most_common.file_type == 'document' %}
+                                        Документ ({{ most_common.count }})
+                                    {% elif most_common.file_type == 'video' %}
+                                        Видео ({{ most_common.count }})
+                                    {% elif most_common.file_type == 'image' %}
+                                        Изображение ({{ most_common.count }})
+                                    {% elif most_common.file_type == 'audio' %}
+                                        Аудио ({{ most_common.count }})
+                                    {% elif most_common.file_type == 'archive' %}
+                                        Архивы ({{ most_common.count }})
+                                    {% else %}
+                                        {{ most_common.file_type|title }} ({{ most_common.count }})
+                                    {% endif %}
+                                {% endwith %}
+                            </strong>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>Рекомендации</h5>
+                    <ul>
+                        {% if total_enrollments < 10 %}
+                        <li>Подумайте о продвижении своего курса, чтобы увеличить число учащихся</li>
+                        {% endif %}
+                        
+                        {% if material_count < 5 %}
+                        <li>Добавьте больше учебных материалов для улучшения содержания курса</li>
+                        {% endif %}
+                        
+                        {% if material_types|length < 3 %}
+                        <li>Разнообразьте свой контент различными типами материалов</li>
+                        {% endif %}
+                        
+                        {% if enrollment_trend %}
+                            {% with last_month=enrollment_trend|last previous_month=enrollment_trend|index:-2 %}
+                                {% if last_month.count < previous_month.count %}
+                                <li>Число учащихся сокращается - подумайте о том, чтобы обновить содержание курса</li>
+                                {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Enrollment Trends Chart
+        var enrollmentCtx = document.getElementById('enrollmentTrendChart').getContext('2d');
+        
+        var months = [
+            {% for entry in enrollment_trend %}
+            "{{ entry.month|date:'M Y' }}",
+            {% endfor %}
+        ];
+        
+        var counts = [
+            {% for entry in enrollment_trend %}
+            {{ entry.count }},
+            {% endfor %}
+        ];
+        
+        var cumulativeCounts = [];
+        var sum = 0;
+        
+        for (var i = 0; i < counts.length; i++) {
+            sum += counts[i];
+            cumulativeCounts.push(sum);
+        }
+        
+        var enrollmentChart = new Chart(enrollmentCtx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [
+                    {
+                        label: 'Monthly Enrollments',
+                        data: counts,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        tension: 0.1
+                    },
+                    {
+                        label: 'Total Enrollments',
+                        data: cumulativeCounts,
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Material Types Chart
+        var materialCtx = document.getElementById('materialTypesChart').getContext('2d');
+        
+        var types = [
+            {% for type in material_types %}
+            "{% if type.file_type == 'document' %}Documents{% elif type.file_type == 'video' %}Videos{% elif type.file_type == 'image' %}Images{% elif type.file_type == 'audio' %}Audio{% elif type.file_type == 'archive' %}Archives{% else %}{{ type.file_type|title }}{% endif %}",
+            {% endfor %}
+        ];
+        
+        var typeCounts = [
+            {% for type in material_types %}
+            {{ type.count }},
+            {% endfor %}
+        ];
+        
+        var materialChart = new Chart(materialCtx, {
+            type: 'doughnut',
+            data: {
+                labels: types,
+                datasets: [{
+                    data: typeCounts,
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(153, 102, 255, 0.7)',
+                        'rgba(255, 159, 64, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

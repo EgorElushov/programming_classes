@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Мой профиль{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Profile Info -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">Информация о профиле</h2>
+                </div>
+                <div class="card-body text-center">
+                    {% if user.role.profile_picture %}
+                    <img src="{{ user.role.profile_picture.url }}" alt="{{ user.username }}" 
+                         class="rounded-circle img-fluid mb-3" style="max-width: 150px;">
+                    {% else %}
+                    <img src="https://via.placeholder.com/150" alt="{{ user.username }}" 
+                         class="rounded-circle img-fluid mb-3">
+                    {% endif %}
+                    
+                    <h3 class="h5">{{ user.username }}</h3>
+                    <p class="text-muted">
+                        {{ user.first_name }} {{ user.last_name }}
+                    </p>
+                    <p class="mb-1"><strong>Email:</strong> {{ user.email }}</p>
+                    <p class="mb-1"><strong>Роль:</strong> {{ user.role.get_role_type_display }}</p>
+                    
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="{% url 'profile-edit' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Редактирование
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            {% if user.role.bio %}
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0">Обо мне</h3>
+                </div>
+                <div class="card-body">
+                    <p>{{ user.role.bio|linebreaks }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Activity -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">Активность</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="activityTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="submissions-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#submissions-content" type="button" role="tab" 
+                                    aria-controls="submissions-content" aria-selected="true">
+                                Посылки
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="courses-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#courses-content" type="button" role="tab" 
+                                    aria-controls="courses-content" aria-selected="false">
+                                Курсы
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="competitions-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#competitions-content" type="button" role="tab" 
+                                    aria-controls="competitions-content" aria-selected="false">
+                                Контесты
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content pt-3" id="activityTabsContent">
+                        <!-- Submissions Tab -->
+                        <div class="tab-pane fade show active" id="submissions-content" role="tabpanel" 
+                             aria-labelledby="submissions-tab">
+                            {% if user.submissions.all %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Задача</th>
+                                            <th>Статус</th>
+                                            <th>Посылки</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for submission in user.submissions.all|slice:":5" %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'problem-detail' submission.problem.problem_id %}">
+                                                    {{ submission.problem.title }}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                {% if submission.status == 'accepted' %}
+                                                <span class="badge bg-success">Принято</span>
+                                                {% elif submission.status == 'pending' %}
+                                                <span class="badge bg-info">Ожидание</span>
+                                                {% else %}
+                                                <span class="badge bg-danger">Отклонено</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ submission.submitted_at|date:"M d, Y" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="text-center mt-3">
+                                <a href="{% url 'user-submissions' %}" class="btn btn-outline-primary">
+                                    Показать все посылки
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <p class="lead">Вы еще не решали задач.</p>
+                                <a href="{% url 'problem-list' %}" class="btn btn-primary">
+                                    Поищем задачи?
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Courses Tab -->
+                        <div class="tab-pane fade" id="courses-content" role="tabpanel" 
+                             aria-labelledby="courses-tab">
+                            <!-- Enrolled Courses -->
+                            <h4 class="h5 mb-3">Мои курсы</h4>
+                            {% if user.enrollments.all %}
+                            <div class="list-group mb-4">
+                                {% for enrollment in user.enrollments.all|slice:":3" %}
+                                <a href="{% url 'course-detail' enrollment.course.course_id %}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ enrollment.course.title }}</h5>
+                                        <small>{{ enrollment.enrolled_at|date:"M d, Y" }}</small>
+                                    </div>
+                                    <p class="mb-1">{{ enrollment.course.description|truncatechars:100 }}</p>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="text-center mb-4">
+                                <a href="{% url 'my-courses' %}" class="btn btn-outline-primary">
+                                    Посмотреть все курсы
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                Вы еще не записаны ни на какие курсы.
+                                <a href="{% url 'course-list' %}" class="alert-link">Найти свой курс</a>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Created Courses (if instructor) -->
+                            {% if user.role.role_type == 'instructor' %}
+                            <h4 class="h5 mb-3">Создать курс</h4>
+                            {% if user.created_courses.all %}
+                            <div class="list-group">
+                                {% for course in user.created_courses.all|slice:":3" %}
+                                <a href="{% url 'course-detail' course.course_id %}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ course.title }}</h5>
+                                        <small>{{ course.enrollments.count }} учится</small>
+                                    </div>
+                                    <p class="mb-1">{{ course.description|truncatechars:100 }}</p>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <a href="{% url 'my-courses' %}" class="btn btn-outline-primary">
+                                    Управление своими курсами
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-3">
+                                <p>Вы еще не создали никаких курсов.</p>
+                                <a href="{% url 'course-create' %}" class="btn btn-primary">
+                                    Создать курс
+                                </a>
+                            </div>
+                            {% endif %}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Competitions Tab -->
+                        <div class="tab-pane fade" id="competitions-content" role="tabpanel" 
+                             aria-labelledby="competitions-tab">
+                            {% if user.competitions.all %}
+                            <div class="list-group">
+                                {% for competition in user.competitions.all|slice:":5" %}
+                                <a href="{% url 'competition-detail' competition.id %}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ competition.title }}</h5>
+                                        <small>
+                                            {% if competition.start_date <= today and competition.end_date >= today %}
+                                            <span class="badge bg-success">Active</span>
+                                            {% elif competition.start_date > today %}
+                                            <span class="badge bg-info">Предстоящий</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">Прошедший</span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                    <p class="mb-1">{{ competition.description|truncatechars:100 }}</p>
+                                    <small>{{ competition.start_date|date:"M d, Y" }} - {{ competition.end_date|date:"M d, Y" }}</small>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <a href="{% url 'competition-list' %}" class="btn btn-outline-primary">
+                                    Просмотр всех контестов
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5">
+                                <p class="lead">Вы еще не участвовали ни в 1 контесте.</p>
+                                <a href="{% url 'competition-list' %}" class="btn btn-primary">
+                                    Поиск контестов
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ material.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h1 class="h2 mb-0">{{ material.title }}</h1>
+                    <span class="badge bg-primary">{{ material.file_extension|upper }}</span>
+                </div>
+                
+                <!-- Preview area depends on file type -->
+                {% if material.file_type == 'image' %}
+                <div class="card-img-top p-3">
+                    <img src="{% url 'serve-material' material.id %}" class="img-fluid rounded" alt="{{ material.title }}">
+                </div>
+                {% elif material.file_type == 'video' %}
+                <div class="card-img-top p-3">
+                    <video class="w-100 rounded" controls>
+                        <source src="{% url 'serve-material' material.id %}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+                {% elif material.file_type == 'audio' %}
+                <div class="card-body">
+                    <audio class="w-100" controls>
+                        <source src="{% url 'serve-material' material.id %}" type="audio/mpeg">
+                        Your browser does not support the audio tag.
+                    </audio>
+                </div>
+                {% elif material.file_type == 'document' and material.file_extension == 'pdf' %}
+                <div class="card-img-top p-3">
+                    <div class="embed-responsive embed-responsive-16by9">
+                        <iframe class="embed-responsive-item w-100" style="height: 500px;" src="{% url 'serve-material' material.id %}" allowfullscreen></iframe>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card-body text-center">
+                    <p class="lead">Preview not available for this file type.</p>
+                    <a href="{% url 'download-material' material.id %}" class="btn btn-primary">
+                        <i class="bi bi-download"></i> Download to View
+                    </a>
+                </div>
+                {% endif %}
+                
+                <div class="card-body">
+                    {% if material.description %}
+                    <div class="mb-4">
+                        <h5>Description</h5>
+                        <p>{{ material.description|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <h5>File Type</h5>
+                            <p>
+                                {% if material.file_type == 'document' %}
+                                <i class="bi bi-file-earmark-text me-2"></i>Document
+                                {% elif material.file_type == 'video' %}
+                                <i class="bi bi-film me-2"></i>Video
+                                {% elif material.file_type == 'image' %}
+                                <i class="bi bi-image me-2"></i>Image
+                                {% elif material.file_type == 'audio' %}
+                                <i class="bi bi-music-note-beamed me-2"></i>Audio
+                                {% elif material.file_type == 'archive' %}
+                                <i class="bi bi-file-earmark-zip me-2"></i>Archive
+                                {% else %}
+                                <i class="bi bi-file-earmark me-2"></i>Other
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Uploaded By</h5>
+                            <p>{{ material.uploaded_by.username }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <h5>Upload Date</h5>
+                            <p>{{ material.upload_date|date:"F d, Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'download-material' material.id %}" class="btn btn-success">
+                        <i class="bi bi-download"></i> Download
+                    </a>
+                    
+                    {% if can_edit %}
+                    <a href="{% url 'material-update' material.id %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <a href="{% url 'material-delete' material.id %}" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'course-material-list' course.course_id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to Materials
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Course Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Course</h5>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ course.title }}</h5>
+                    <p class="card-text">{{ course.description|truncatechars:150 }}</p>
+                    <a href="{% url 'course-detail' course.course_id %}" class="btn btn-outline-primary">
+                        Go to Course
+                    </a>
+                </div>
+            </div>
+            
+            <!-- File Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">File Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>File Size:</span>
+                        <strong>
+                            {% if material.file_size < 1024 %}
+                            {{ material.file_size }} bytes
+                            {% elif material.file_size < 1048576 %}
+                            {{ material.file_size|divisibleby:1024|floatformat:1 }} KB
+                            {% else %}
+                            {{ material.file_size|divisibleby:1048576|floatformat:1 }} MB
+                            {% endif %}
+                        </strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>File Extension:</span>
+                        <strong>{{ material.file_extension|upper }}</strong>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Other Materials -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Other Materials</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for other_material in course.materials.all|slice:":5" %}
+                        {% if other_material.id != material.id %}
+                        <a href="{% url 'material-detail' other_material.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    {% if other_material.file_type == 'document' %}
+                                    <i class="bi bi-file-earmark-text me-2"></i>
+                                    {% elif other_material.file_type == 'video' %}
+                                    <i class="bi bi-film me-2"></i>
+                                    {% elif other_material.file_type == 'image' %}
+                                    <i class="bi bi-image me-2"></i>
+                                    {% elif other_material.file_type == 'audio' %}
+                                    <i class="bi bi-music-note-beamed me-2"></i>
+                                    {% elif other_material.file_type == 'archive' %}
+                                    <i class="bi bi-file-earmark-zip me-2"></i>
+                                    {% else %}
+                                    <i class="bi bi-file-earmark me-2"></i>
+                                    {% endif %}
+                                    {{ other_material.title|truncatechars:25 }}
+                                </h6>
+                                <small>{{ other_material.upload_date|date:"M d" }}</small>
+                            </div>
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'course-material-list' course.course_id %}" class="btn btn-outline-primary btn-sm">
+                        View All Materials
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

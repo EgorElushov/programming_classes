@@ -1,0 +1,250 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ competition.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h1 class="h2 mb-0">{{ competition.title }}</h1>
+                    {% if is_active %}
+                    <span class="badge bg-success">Активный</span>
+                    {% elif competition.start_date|date:'Y-m-d' > today|date:'Y-m-d' %}
+                    <span class="badge bg-info">Будущий</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Прошедший</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Описание</h5>
+                        <p>{{ competition.description|linebreaks }}</p>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h5>Дата начала</h5>
+                            <p>{{ competition.start_date|date:"F d, Y" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Дата конца</h5>
+                            <p>{{ competition.end_date|date:"F d, Y" }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>От</h5>
+                        <p>{{ competition.user.username }}</p>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    {% if user.is_authenticated %}
+                        {% if user == competition.user %}
+                            <a href="{% url 'competition-update' competition.id %}" class="btn btn-warning">
+                                <i class="bi bi-pencil"></i> Редактировать
+                            </a>
+                            <a href="{% url 'competition-delete' competition.id %}" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Удалить
+                            </a>
+                        {% elif is_active %}
+                            <a href="{% url 'competition-detail' competition.id %}" class="btn btn-success">
+                                <i class="bi bi-person-plus"></i> Присоединиться
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary">
+                            Вход для участия
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Problems List -->
+            {% if problems %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Задачи</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Сложность</th>
+                                    <th>Посылки</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for problem in problems %}
+                                <tr>
+                                    <td>{{ problem.title }}</td>
+                                    <td>
+                                        {% if problem.difficulty == 'Easy' %}
+                                        <span class="badge bg-success">Легкие</span>
+                                        {% elif problem.difficulty == 'Medium' %}
+                                        <span class="badge bg-warning text-dark">Средние</span>
+                                        {% elif problem.difficulty == 'Hard' %}
+                                        <span class="badge bg-danger">Тяжелые</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ problem.difficulty }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ problem.submissions.count }}</td>
+                                    <td>
+                                        <a href="{% url 'problem-detail' problem.problem_id %}" class="btn btn-sm btn-outline-primary">
+                                            Решать
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% if user == competition.user %}
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'competition-problem-create' competition.id %}" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i>Добавить задачу
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% elif user == competition.user %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <p class="lead text-center">Задач пока нет.</p>
+                    <div class="text-center">
+                        <a href="{% url 'competition-problem-create' competition.id %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Создать задачу
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <!-- Competition Status -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Статус</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Countdown or Status -->
+                    {% if competition.start_date|date:'Y-m-d' > today|date:'Y-m-d' %}
+                    <div class="text-center mb-3">
+                        <h6>Начнется</h6>
+                        <div id="countdown" class="display-6 text-primary"></div>
+                    </div>
+                    {% elif is_active %}
+                    <div class="text-center mb-3">
+                        <h6>Закончится</h6>
+                        <div id="countdown" class="display-6 text-danger"></div>
+                    </div>
+                    {% else %}
+                    <div class="text-center mb-3">
+                        <h6>Статус</h6>
+                        <div class="display-6 text-secondary">Завершено</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Leaderboard -->
+            <div class="card mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Таблица лидеров</h5>
+                    <a href="{% url 'submission-leaderboard' competition.id %}" class="btn btn-sm btn-outline-primary">Полная турнирная таблица</a>
+                </div>
+                <div class="card-body p-0">
+                    {% if standings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Пользователь</th>
+                                    <th>Счет</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for participant in standings %}
+                                <tr {% if participant.user == user %}class="table-primary"{% endif %}>
+                                    <td>{{ participant.rank|default:forloop.counter }}</td>
+                                    <td>{{ participant.user.username }}</td>
+                                    <td>{{ participant.score }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="p-3 text-center">
+                        <p class="mb-0">Участников пока нет</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- User Participation -->
+            {% if user.is_authenticated and participation %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Ваше участие</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <strong>Место:</strong> {{ participation.rank|default:"Not ranked yet" }}
+                    </div>
+                    <div class="mb-2">
+                        <strong>Счет:</strong> {{ participation.score }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for countdown -->
+{% if is_active or competition.start_date|date:'Y-m-d' > today|date:'Y-m-d' %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var countDownDate = new Date("{{ competition.end_date|date:'Y-m-d' }}T23:59:59").getTime();
+        
+        {% if competition.start_date|date:'Y-m-d' > today|date:'Y-m-d' %}
+        countDownDate = new Date("{{ competition.start_date|date:'Y-m-d' }}T00:00:00").getTime();
+        {% endif %}
+
+        // Update the countdown every 1 second
+        var x = setInterval(function() {
+            var now = new Date().getTime();
+            var distance = countDownDate - now;
+            
+            var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            
+            document.getElementById("countdown").innerHTML = days + "d " + hours + "h "
+            + minutes + "m " + seconds + "s ";
+            
+            if (distance < 0) {
+                clearInterval(x);
+                document.getElementById("countdown").innerHTML = "EXPIRED";
+                setTimeout(function() {
+                    window.location.reload();
+                }, 3000);
+            }
+        }, 1000);
+    });
+</script>
+{% endif %}
+{% endblock %}

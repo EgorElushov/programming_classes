@@ -9,113 +9,118 @@ from django.urls import reverse_lazy
 
 from .models import Competition
 from .forms import CompetitionForm
+from problem.models import Problem
+
 
 class CompetitionListView(ListView):
     model = Competition
     template_name = 'contests/competition_list.html'
     context_object_name = 'competitions'
     paginate_by = 10
-    
+
     def get_queryset(self):
         queryset = Competition.objects.all()
-        
+
         status_filter = self.request.GET.get('status')
         today = timezone.now().date()
-        
+
         if status_filter == 'active':
             queryset = queryset.filter(start_date__lte=today, end_date__gte=today)
         elif status_filter == 'upcoming':
             queryset = queryset.filter(start_date__gt=today)
         elif status_filter == 'past':
             queryset = queryset.filter(end_date__lt=today)
-            
+
         return queryset.order_by('-start_date')
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         today = timezone.now().date()
-        
-        context['active_count'] = Competition.objects.filter(
-            start_date__lte=today, 
-            end_date__gte=today
-        ).count()
-        
-        context['upcoming_count'] = Competition.objects.filter(
-            start_date__gt=today
-        ).count()
-        
+
+        context['active_count'] = Competition.objects.filter(start_date__lte=today, end_date__gte=today).count()
+
+        context['upcoming_count'] = Competition.objects.filter(start_date__gt=today).count()
+        context['today'] = today
+
         return context
+
 
 class CompetitionDetailView(DetailView):
     model = Competition
     template_name = 'contests/competition_detail.html'
     context_object_name = 'competition'
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         competition = self.get_object()
-        
+        context['problems'] = Problem.objects.filter(competition=competition)
         today = timezone.now().date()
-        context['is_active'] = (competition.start_date <= today <= competition.end_date)
-        
+
+        context['today'] = today
+
+        context['is_active'] = competition.start_date <= today <= competition.end_date
+
         if self.request.user.is_authenticated:
-            context['can_edit'] = (self.request.user == competition.user or 
-                                  self.request.user.is_staff)
-            
+            context['can_edit'] = self.request.user == competition.user or self.request.user.is_staff
+
         return context
+
 
 class CompetitionCreateView(LoginRequiredMixin, CreateView):
     model = Competition
     form_class = CompetitionForm
     template_name = 'contests/competition_form.html'
     success_url = reverse_lazy('competition-list')
-    
+
     def form_valid(self, form):
         form.instance.user = self.request.user
-        messages.success(self.request, "Competition created successfully!")
+        messages.success(self.request, "Контест успешно создан!")
         return super().form_valid(form)
+
 
 class CompetitionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Competition
     form_class = CompetitionForm
     template_name = 'contests/competition_form.html'
-    
+
     def test_func(self):
         competition = self.get_object()
         return self.request.user == competition.user or self.request.user.is_staff
-    
+
     def get_success_url(self):
         return reverse_lazy('competition-detail', kwargs={'pk': self.object.pk})
-    
+
     def form_valid(self, form):
-        messages.success(self.request, "Competition updated successfully!")
+        messages.success(self.request, "Контест успешно обновлен!")
         return super().form_valid(form)
+
 
 class CompetitionDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Competition
     success_url = reverse_lazy('competition-list')
     template_name = 'contests/competition_confirm_delete.html'
-    
+
     def test_func(self):
         competition = self.get_object()
         return self.request.user == competition.user or self.request.user.is_staff
-    
+
     def delete(self, request, *args, **kwargs):
-        messages.success(self.request, "Competition deleted successfully!")
+        messages.success(self.request, "Контест успешно удален!")
         return super().delete(request, *args, **kwargs)
+
 
 @login_required
 def competition_management(request, pk):
     competition = get_object_or_404(Competition, pk=pk)
-    
+
     if not (request.user == competition.user or request.user.is_staff):
-        return HttpResponseForbidden("You do not have permission to manage this competition")
-    
+        return HttpResponseForbidden("У вас нет прав для управления контестом")
+
     if request.method == 'POST':
         form = CompetitionForm(request.POST, instance=competition)
         if form.is_valid():
             form.save()
-            messages.success(request, "Competition updated successfully")
+            messages.success(request, "Контест успешно обновлен")
             return redirect('competition-management', pk=competition.pk)
     else:
         form = CompetitionForm(instance=competition)
@@ -127,42 +132,45 @@ def competition_management(request, pk):
         status = "upcoming"
     else:
         status = "past"
-    
-    return render(request, 'contests/competition_management.html', {
-        'competition': competition,
-        'form': form,
-        'status': status
-    })
+
+    return render(
+        request, 'contests/competition_management.html', {'competition': competition, 'form': form, 'status': status}
+    )
+    '''
+    ДОПИСАТЬ
+    '''
+
 
 @login_required
 def codeforces_import(request):
     if request.method == 'POST':
-        messages.success(request, "Problems imported successfully from Codeforces")
+        messages.success(request, "Задача успешно импортирована из Codeforces")
         return redirect('competition-list')
-    
+
     return render(request, 'contests/codeforces_import.html')
+
 
 @login_required
 def yandex_contest_import(request):
     if request.method == 'POST':
-        ''' пока заглушка'''
-        messages.success(request, "Problems imported successfully from Yandex.Contest")
+        '''пока заглушка'''
+        messages.success(request, "Задача успешно импортирована из Yandex.Contest")
         return redirect('competition-list')
-    
+
     return render(request, 'contests/yandex_import.html')
 
+
 def competition_statistics(request, pk):
-    """View statistics for a competition"""
+    '''
+    ДОПИСАТЬ
+    '''
     competition = get_object_or_404(Competition, pk=pk)
-    
+
     stats = {
         'total_participants': 45,
         'submissions': 230,
         'successful_submissions': 120,
         'average_score': 75.5,
     }
-    
-    return render(request, 'contests/competition_statistics.html', {
-        'competition': competition,
-        'stats': stats
-    })
+
+    return render(request, 'contests/competition_statistics.html', {'competition': competition, 'stats': stats})

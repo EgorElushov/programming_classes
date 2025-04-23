@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Таблица лидеров - {{ competition.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Таблица лидеров</h1>
+        <a href="{% url 'competition-detail' competition.id %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Назад к контесту
+        </a>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">{{ competition.title }}</h2>
+        </div>
+        <div class="card-body">
+            <p>{{ competition.description|truncatewords:50 }}</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-calendar me-2"></i>
+                        <span>{{ competition.start_date|date:"M d, Y" }} - {{ competition.end_date|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="d-flex align-items-center justify-content-md-end">
+                        <i class="bi bi-puzzle me-2"></i>
+                        <span>{{ problem_count }} задач</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if leaderboard %}
+    <div class="card">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">Таблица</h2>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>Место</th>
+                            <th>Пользователь</th>
+                            <th>Задач решено</th>
+                            <th>Всего посылок</th>
+                            <th>Эффективность</th>
+                            <th>Последняя посылка</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in leaderboard %}
+                        <tr {% if entry.user__id == request.user.id %}class="table-primary"{% endif %}>
+                            <td>{{ entry.rank }}</td>
+                            <td>{{ entry.user__username }}</td>
+                            <td>{{ entry.solved_count }}</td>
+                            <td>{{ entry.total_submissions }}</td>
+                            <td>{{ entry.efficiency|floatformat:1 }}%</td>
+                            <td>{{ entry.last_accepted|date:"M d, Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Пока посылок нет.
+    </div>
+    {% endif %}
+    
+    <div class="card mt-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">Правила</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Критерии</h5>
+                    <ol>
+                        <li>Количество решенных задач (чем больше, тем лучше)</li>
+                        <li>В случае ничьей пользователь, который первым решил свою последнюю задачу, занимает более высокое место</li>
+                        <li>Эффективность предоставляется исключительно для информации и не влияет на ранжирование</li>
+                    </ol>
+                </div>
+                <div class="col-md-6">
+                    <h5>Как занять место выше?</h5>
+                    <ul>
+                        <li>Решайте больше задач</li>
+                        <li>Сдавайте корректное решение быстрее</li>
+                        <li>Сосредоточьтесь на задачах, которые вы, скорее всего, решите в первую очередь</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

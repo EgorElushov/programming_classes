@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Мои курсы{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="h2 mb-4">Мои курсы</h1>
+
+    <!-- Tabs for different course sections -->
+    <ul class="nav nav-tabs mb-4" id="coursesTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="enrolled-tab" data-bs-toggle="tab" data-bs-target="#enrolled" type="button" role="tab" aria-controls="enrolled" aria-selected="true">
+                Изучаю ({{ enrolled_courses|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="created-tab" data-bs-toggle="tab" data-bs-target="#created" type="button" role="tab" aria-controls="created" aria-selected="false">
+                Создал ({{ created_courses|length }})
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab content -->
+    <div class="tab-content" id="coursesTabContent">
+        <!-- Enrolled Courses Tab -->
+        <div class="tab-pane fade show active" id="enrolled" role="tabpanel" aria-labelledby="enrolled-tab">
+            {% if enrolled_courses %}
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                {% for course in enrolled_courses %}
+                <div class="col">
+                    <div class="card h-100 border-success">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ course.title }}</h5>
+                            <span class="badge bg-success">Записан</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ course.description|truncatechars:150 }}</p>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">
+                                    <i class="bi bi-person"></i> {{ course.created_by.username }}
+                                </small>
+                                <small class="text-muted">
+                                    <i class="bi bi-people"></i> {{ course.enrollments.count }} записан
+                                </small>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <a href="{% url 'course-detail' course.course_id %}" class="btn btn-outline-primary">Просмотр курса</a>
+                            <a href="{% url 'course-material-list' course.course_id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-file-earmark"></i> Материалы
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Вы еще не записаны ни на какие курсы.
+                <a href="{% url 'course-list' %}" class="alert-link">Просмотр доступных курсов</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Created Courses Tab -->
+        <div class="tab-pane fade" id="created" role="tabpanel" aria-labelledby="created-tab">
+            {% if created_courses %}
+            <div class="d-flex justify-content-end mb-3">
+                <a href="{% url 'course-create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Создать новый курс
+                </a>
+            </div>
+            <div class="row row-cols-1 row-cols-md-3 g-4">
+                {% for course in created_courses %}
+                <div class="col">
+                    <div class="card h-100 border-primary">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ course.title }}</h5>
+                            <span class="badge bg-primary">Преподаватель</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ course.description|truncatechars:150 }}</p>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar"></i> Создано {{ course.created_at|date:"M d, Y" }}
+                                </small>
+                                <small class="text-muted">
+                                    <i class="bi bi-people"></i> {{ course.enrollments.count }} учится
+                                </small>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <a href="{% url 'course-detail' course.course_id %}" class="btn btn-outline-primary">Просмотр курса</a>
+                            <a href="{% url 'course-update' course.course_id %}" class="btn btn-outline-secondary">Редактирование</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <p class="lead mb-4">Вы еще не создали никаких курсов.</p>
+                <a href="{% url 'course-create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Создайте свой первый курс
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

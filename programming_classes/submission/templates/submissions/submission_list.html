@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load math_filters %}
+
+{% block title %}Решения{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Решения</h1>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Всего решений</h5>
+                    <p class="display-4">{{ total_submissions }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Принято</h5>
+                    <p class="display-4">{{ accepted_submissions }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Отклонено</h5>
+                    <p class="display-4">{{ total_submissions|subtract:accepted_submissions }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Процент</h5>
+                    <p class="display-4">
+                        {% if total_submissions > 0 %}
+                        {{ accepted_submissions|multiply:100|divide:total_submissions|floatformat:1 }}%
+                        {% else %}
+                        0%
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Фильтры</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <select name="problem_id" class="form-select">
+                        <option value="">Все задачи</option>
+                        {% for problem in problems %}
+                        <option value="{{ problem.problem_id }}" {% if active_filters.problem_id == problem.problem_id|stringformat:"i" %}selected{% endif %}>
+                            {{ problem.title }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="">Все статусы</option>
+                        {% for status_value, status_label in status_choices %}
+                        <option value="{{ status_value }}" {% if active_filters.status == status_value %}selected{% endif %}>
+                            {{ status_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" name="date_from" class="form-control" placeholder="From Date" value="{{ active_filters.date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" name="date_to" class="form-control" placeholder="To Date" value="{{ active_filters.date_to }}">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-secondary w-100">Фильтровать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Submission List -->
+    {% if submissions %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Задача</th>
+                            <th>Статус</th>
+                            <th>Сдано</th>
+                            <th>Действие</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for submission in submissions %}
+                        <tr>
+                            <td>{{ submission.submission_id }}</td>
+                            <td>
+                                <a href="{% url 'problem-detail' submission.problem.problem_id %}">
+                                    {{ submission.problem.title }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if submission.status == 'accepted' %}
+                                <span class="badge bg-success">Принято</span>
+                                {% elif submission.status == 'pending' %}
+                                <span class="badge bg-info">Ожидание</span>
+                                {% else %}
+                                <span class="badge bg-danger">Отклонено</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ submission.submitted_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'submission-detail' submission.submission_id %}" class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{% for key, value in active_filters.items %}{% if value and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Первая</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in active_filters.items %}{% if value and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Предыдущая</a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% for key, value in active_filters.items %}{% if value and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in active_filters.items %}{% if value and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Следующая</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in active_filters.items %}{% if value and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Последняя</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Не найдено решений соответствующих вашим критериям.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

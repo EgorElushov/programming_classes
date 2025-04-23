@@ -1,0 +1,332 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Materials - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Course Materials</h1>
+        <a href="{% url 'course-detail' course.course_id %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Back to Course
+        </a>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h2 class="h5 mb-0">{{ course.title }}</h2>
+            {% if is_creator %}
+            <div>
+                <a href="{% url 'upload-material' course.course_id %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-upload"></i> Upload Material
+                </a>
+                <a href="{% url 'bulk-upload-materials' course.course_id %}" class="btn btn-outline-primary btn-sm ms-2">
+                    <i class="bi bi-cloud-upload"></i> Bulk Upload
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- Material filters and search -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <form class="d-flex" method="get">
+                        <input class="form-control me-2" type="search" placeholder="Search materials..." name="search" value="{{ request.GET.search }}">
+                        <button class="btn btn-outline-primary" type="submit">Search</button>
+                    </form>
+                </div>
+                <div class="col-md-4">
+                    <select class="form-select" id="materialTypeFilter">
+                        <option value="all">All Types</option>
+                        <option value="document">Documents</option>
+                        <option value="video">Videos</option>
+                        <option value="image">Images</option>
+                        <option value="audio">Audio</option>
+                        <option value="archive">Archives</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            {% if materials %}
+            <!-- Materials Grid -->
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="materialsContainer">
+                {% for material in materials %}
+                <div class="col material-item" data-type="{{ material.file_type }}">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center 
+                            {% if material.file_type == 'document' %}bg-primary bg-opacity-10
+                            {% elif material.file_type == 'video' %}bg-danger bg-opacity-10
+                            {% elif material.file_type == 'image' %}bg-success bg-opacity-10
+                            {% elif material.file_type == 'audio' %}bg-info bg-opacity-10
+                            {% elif material.file_type == 'archive' %}bg-warning bg-opacity-10
+                            {% else %}bg-secondary bg-opacity-10{% endif %}">
+                            <div>
+                                {% if material.file_type == 'document' %}
+                                <i class="bi bi-file-earmark-text text-primary fs-4"></i>
+                                {% elif material.file_type == 'video' %}
+                                <i class="bi bi-film text-danger fs-4"></i>
+                                {% elif material.file_type == 'image' %}
+                                <i class="bi bi-image text-success fs-4"></i>
+                                {% elif material.file_type == 'audio' %}
+                                <i class="bi bi-music-note-beamed text-info fs-4"></i>
+                                {% elif material.file_type == 'archive' %}
+                                <i class="bi bi-file-earmark-zip text-warning fs-4"></i>
+                                {% else %}
+                                <i class="bi bi-file-earmark text-secondary fs-4"></i>
+                                {% endif %}
+                            </div>
+                            <span class="badge 
+                                {% if material.file_type == 'document' %}bg-primary
+                                {% elif material.file_type == 'video' %}bg-danger
+                                {% elif material.file_type == 'image' %}bg-success
+                                {% elif material.file_type == 'audio' %}bg-info
+                                {% elif material.file_type == 'archive' %}bg-warning
+                                {% else %}bg-secondary{% endif %}">
+                                {{ material.file_extension|upper }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ material.title }}</h5>
+                            {% if material.description %}
+                            <p class="card-text text-muted">{{ material.description|truncatechars:80 }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Added: {{ material.upload_date|date:"M d, Y" }}
+                            </small>
+                            <div class="btn-group">
+                                <a href="{% url 'material-detail' material.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                                <a href="{% url 'download-material' material.id %}" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-download"></i> Download
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            {% else %}
+            <!-- No materials message -->
+            <div class="text-center py-5">
+                <i class="bi bi-journal-x" style="font-size: 4rem; color: #ccc;"></i>
+                <h3 class="mt-3">No Materials Available</h3>
+                <p class="text-muted">This course doesn't have any materials yet.</p>
+                {% if is_creator %}
+                <a href="{% url 'upload-material' course.course_id %}" class="btn btn-primary mt-2">
+                    <i class="bi bi-upload"></i> Upload First Material
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Materials By Type Section -->
+    {% if materials %}
+    <div class="card">
+        <div class="card-header bg-light">
+            <h3 class="h5 mb-0">Materials By Type</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Documents -->
+                <div class="col-md-4 mb-3">
+                    <div class="card border-primary h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-file-earmark-text text-primary me-2"></i> Documents
+                            </h5>
+                            <p class="display-6">
+                                {% with count=0 %}
+                                    {% for material in materials %}
+                                        {% if material.file_type == 'document' %}
+                                            {% with count=count|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ count }}
+                                {% endwith %}
+                            </p>
+                            <a href="#" class="stretched-link text-decoration-none" 
+                               onclick="filterMaterials('document'); return false;">View Documents</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Videos -->
+                <div class="col-md-4 mb-3">
+                    <div class="card border-danger h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-film text-danger me-2"></i> Videos
+                            </h5>
+                            <p class="display-6">
+                                {% with count=0 %}
+                                    {% for material in materials %}
+                                        {% if material.file_type == 'video' %}
+                                            {% with count=count|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ count }}
+                                {% endwith %}
+                            </p>
+                            <a href="#" class="stretched-link text-decoration-none" 
+                               onclick="filterMaterials('video'); return false;">View Videos</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Images -->
+                <div class="col-md-4 mb-3">
+                    <div class="card border-success h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-image text-success me-2"></i> Images
+                            </h5>
+                            <p class="display-6">
+                                {% with count=0 %}
+                                    {% for material in materials %}
+                                        {% if material.file_type == 'image' %}
+                                            {% with count=count|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ count }}
+                                {% endwith %}
+                            </p>
+                            <a href="#" class="stretched-link text-decoration-none" 
+                               onclick="filterMaterials('image'); return false;">View Images</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Audio -->
+                <div class="col-md-4 mb-3">
+                    <div class="card border-info h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-music-note-beamed text-info me-2"></i> Audio
+                            </h5>
+                            <p class="display-6">
+                                {% with count=0 %}
+                                    {% for material in materials %}
+                                        {% if material.file_type == 'audio' %}
+                                            {% with count=count|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ count }}
+                                {% endwith %}
+                            </p>
+                            <a href="#" class="stretched-link text-decoration-none" 
+                               onclick="filterMaterials('audio'); return false;">View Audio</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Archives -->
+                <div class="col-md-4 mb-3">
+                    <div class="card border-warning h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-file-earmark-zip text-warning me-2"></i> Archives
+                            </h5>
+                            <p class="display-6">
+                                {% with count=0 %}
+                                    {% for material in materials %}
+                                        {% if material.file_type == 'archive' %}
+                                            {% with count=count|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ count }}
+                                {% endwith %}
+                            </p>
+                            <a href="#" class="stretched-link text-decoration-none" 
+                               onclick="filterMaterials('archive'); return false;">View Archives</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Other -->
+                <div class="col-md-4 mb-3">
+                    <div class="card border-secondary h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-file-earmark text-secondary me-2"></i> Other
+                            </h5>
+                            <p class="display-6">
+                                {% with count=0 %}
+                                    {% for material in materials %}
+                                        {% if material.file_type == 'other' %}
+                                            {% with count=count|add:1 %}{% endwith %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {{ count }}
+                                {% endwith %}
+                            </p>
+                            <a href="#" class="stretched-link text-decoration-none" 
+                               onclick="filterMaterials('other'); return false;">View Other</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Material type filter
+        const typeFilter = document.getElementById('materialTypeFilter');
+        if (typeFilter) {
+            typeFilter.addEventListener('change', function() {
+                filterMaterials(this.value);
+            });
+        }
+        
+        // Apply search filter if present in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchQuery = urlParams.get('search');
+        if (searchQuery) {
+            filterMaterialsBySearch(searchQuery);
+        }
+    });
+    
+    function filterMaterials(type) {
+        const items = document.querySelectorAll('.material-item');
+        
+        items.forEach(item => {
+            if (type === 'all' || item.dataset.type === type) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        // Update the dropdown
+        document.getElementById('materialTypeFilter').value = type;
+    }
+    
+    function filterMaterialsBySearch(query) {
+        if (!query) return;
+        
+        query = query.toLowerCase();
+        const items = document.querySelectorAll('.material-item');
+        
+        items.forEach(item => {
+            const title = item.querySelector('.card-title').textContent.toLowerCase();
+            const description = item.querySelector('.card-text') ? 
+                item.querySelector('.card-text').textContent.toLowerCase() : '';
+                
+            if (title.includes(query) || description.includes(query)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

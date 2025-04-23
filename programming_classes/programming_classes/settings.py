@@ -145,3 +145,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
+AUTH_USER_MODEL = 'accounts.Account'
+
+# Authentication URLs
+LOGIN_URL = 'login'
+LOGOUT_URL = 'logout'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+
+# Middleware setting (add your custom middleware)
+# settings.py
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',  # Required for admin
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Required for admin
+    'django.contrib.messages.middleware.MessageMiddleware',  # Required for admin
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Custom middleware can go here
+    'accounts.middleware.RoleMiddleware',  # Your custom middleware
+]

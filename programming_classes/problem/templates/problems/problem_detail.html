@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ problem.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Problem Details -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h1 class="h2 mb-0">{{ problem.title }}</h1>
+                    {% if problem.difficulty == 'Easy' %}
+                    <span class="badge bg-success">Легкая</span>
+                    {% elif problem.difficulty == 'Medium' %}
+                    <span class="badge bg-warning text-dark">Средняя</span>
+                    {% elif problem.difficulty == 'Hard' %}
+                    <span class="badge bg-danger">Сложная</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ problem.difficulty }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Описание</h5>
+                        <div class="problem-description">
+                            {{ problem.description|linebreaks }}
+                        </div>
+                    </div>
+                    
+                    {% if sample_tests %}
+                    <div class="mb-4">
+                        <h5>Примеры тестовых заданий</h5>
+                        {% for test in sample_tests %}
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <strong>Пример {{ forloop.counter }}</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Входные данные</h6>
+                                        <pre class="bg-light p-2 rounded"><code>{{ test.input_data }}</code></pre>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Выходные данные</h6>
+                                        <pre class="bg-light p-2 rounded"><code>{{ test.expected_output }}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-4">
+                        <h5>Контест</h5>
+                        <p>
+                            Эта задача часть
+                            <a href="{% url 'competition-detail' problem.competition.id %}">{{ problem.competition.title }}</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    {% if can_edit %}
+                    <a href="{% url 'problem-update' problem.problem_id %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Редактирование
+                    </a>
+                    <a href="{% url 'problem-delete' problem.problem_id %}" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Удаление
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'problem-submissions' problem.problem_id %}" class="btn btn-info">
+                        <i class="bi bi-list-check"></i> Просмотр посылок
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submission Form -->
+        <div class="col-md-4">
+            {% if user.is_authenticated %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Сдать решение</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'create-submission' problem.problem_id %}">
+                        {% csrf_token %}
+                        
+                        {% if contest %}
+                        <input type="hidden" name="contest" value="{{ contest.id }}">
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="language" class="form-label">Язык программирования</label>
+                            <select name="language" id="language" class="form-select" required>
+                                <option value="">Выбери язык</option>
+                                {% for lang in programming_languages %}
+                                <option value="{{ lang.id }}">{{ lang.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="code" class="form-label">Ваш код</label>
+                            <textarea name="code" id="code" rows="15" class="form-control code-editor" required></textarea>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Сдать решение
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Previous Submissions -->
+            {% if user_submissions %}
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Ваши недавние посылки</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for submission in user_submissions %}
+                        <a href="{% url 'submission-detail' submission.submission_id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">
+                                    {% if submission.status == 'accepted' %}
+                                    <span class="text-success"><i class="bi bi-check-circle"></i> Принятые</span>
+                                    {% elif submission.status == 'pending' %}
+                                    <span class="text-info"><i class="bi bi-hourglass"></i> Ожидание</span>
+                                    {% else %}
+                                    <span class="text-danger"><i class="bi bi-x-circle"></i> Отклонены</span>
+                                    {% endif %}
+                                </h6>
+                                <small>{{ submission.submitted_at|timesince }} назад</small>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <p class="lead text-center">Вам необходимо войти в систему, чтобы отправить решение.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary">
+                            <i class="bi bi-box-arrow-in-right"></i> Вход
+                        </a>
+                        <a href="{% url 'register' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-person-plus"></i> Регистрация
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Initialize code editor if user is authenticated -->
+{% if user.is_authenticated %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var codeEditor = CodeMirror.fromTextArea(document.getElementById('code'), {
+            lineNumbers: true,
+            indentUnit: 4,
+            mode: 'text/x-python',
+            theme: 'default',
+            lineWrapping: true
+        });
+        
+        document.getElementById('language').addEventListener('change', function() {
+            var language = this.value;
+            codeEditor.setOption('mode', language === '1' ? 'text/x-python' : 'text/x-c++src');
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}
+

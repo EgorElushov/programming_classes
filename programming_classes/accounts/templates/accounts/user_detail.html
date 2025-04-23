@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{{ user_profile.username }} профиль{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Profile Info -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h2 class="h4 mb-0">{{ user_profile.username }}</h2>
+                </div>
+                <div class="card-body text-center">
+                    {% if user_profile.role.profile_picture %}
+                    <img src="{{ user_profile.role.profile_picture.url }}" alt="{{ user_profile.username }}" 
+                         class="rounded-circle img-fluid mb-3" style="max-width: 150px;">
+                    {% else %}
+                    <img src="https://via.placeholder.com/150" alt="{{ user_profile.username }}" 
+                         class="rounded-circle img-fluid mb-3">
+                    {% endif %}
+                    
+                    <p class="text-muted">
+                        {{ user_profile.first_name }} {{ user_profile.last_name }}
+                    </p>
+                    <p class="mb-1"><strong>Role:</strong> {{ user_profile.role.get_role_type_display }}</p>
+                </div>
+            </div>
+            
+            {% if user_profile.role.bio %}
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0">О</h3>
+                </div>
+                <div class="card-body">
+                    <p>{{ user_profile.role.bio|linebreaks }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Statistics Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0">Статистика</h3>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% if submission_count is not None %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Посылки
+                            <span class="badge bg-primary rounded-pill">{{ submission_count }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Высланные решения
+                            <span class="badge bg-success rounded-pill">{{ accepted_submissions }}</span>
+                        </li>
+                        {% endif %}
+                        
+                        {% if created_courses is not None %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Создано курсов
+                            <span class="badge bg-info rounded-pill">{{ created_courses }}</span>
+                        </li>
+                        {% endif %}
+                        
+                        {% if enrolled_courses is not None %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Изучаемые курсы
+                            <span class="badge bg-primary rounded-pill">{{ enrolled_courses }}</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Activity -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h2 class="h4 mb-0">{{ user_profile.username }} активность</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="activityTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="submissions-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#submissions-content" type="button" role="tab" 
+                                    aria-controls="submissions-content" aria-selected="true">
+                                Недавние посылки
+                            </button>
+                        </li>
+                        
+                        {% if user_profile.role.role_type == 'instructor' %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="courses-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#courses-content" type="button" role="tab" 
+                                    aria-controls="courses-content" aria-selected="false">
+                                Создать курс
+                            </button>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    
+                    <div class="tab-content pt-3" id="activityTabsContent">
+                        <!-- Submissions Tab -->
+                        <div class="tab-pane fade show active" id="submissions-content" role="tabpanel" 
+                             aria-labelledby="submissions-tab">
+                            {% if user_profile.submissions.all %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Задача</th>
+                                            <th>Статус</th>
+                                            <th>Посылка</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for submission in user_profile.submissions.all|slice:":10" %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'problem-detail' submission.problem.problem_id %}">
+                                                    {{ submission.problem.title }}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                {% if submission.status == 'accepted' %}
+                                                <span class="badge bg-success">Принято</span>
+                                                {% elif submission.status == 'pending' %}
+                                                <span class="badge bg-info">Ожидание</span>
+                                                {% else %}
+                                                <span class="badge bg-danger">Отклонено</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ submission.submitted_at|date:"M d, Y" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-3">
+                                <p class="lead">Посылок не найдено.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Created Courses Tab (for instructors) -->
+                
+                        <!-- Created Courses Tab (for instructors) -->
+                        <div class="tab-pane fade" id="courses-content" role="tabpanel" 
+                             aria-labelledby="courses-tab">
+                            {% if user_profile.created_courses.all %}
+                            <div class="list-group">
+                                {% for course in user_profile.created_courses.all %}
+                                <a href="{% url 'course-detail' course.course_id %}" 
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">{{ course.title }}</h5>
+                                        <small>{{ course.enrollments.count }} enrolled</small>
+                                    </div>
+                                    <p class="mb-1">{{ course.description|truncatechars:150 }}</p>
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-3">
+                                <p class="lead">Созданных курсов не найдено</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Achievements or Badges (optional) -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h3 class="h5 mb-0">Достижения</h3>
+                </div>
+                <div class="card-body">
+                    {% if achievements %}
+                    <div class="row row-cols-2 row-cols-md-4 g-3">
+                        {% for achievement in achievements %}
+                        <div class="col text-center">
+                            <div class="p-3 bg-light rounded">
+                                <i class="{{ achievement.icon }} fs-1 text-{{ achievement.color }}"></i>
+                                <p class="mt-2 mb-0">{{ achievement.name }}</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <p>Достижений пока нет.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

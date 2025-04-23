@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">Создание аккаунта</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <h4 class="mb-3">Информация об аккаунте</h4>
+                        {{ form|crispy }}
+                        
+                        <h4 class="mt-4 mb-3">Информация о роли</h4>
+                        {{ role_form|crispy }}
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">Регистрация</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    Уже есть аккаунт? <a href="{% url 'login' %}">Вход</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

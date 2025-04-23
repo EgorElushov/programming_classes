@@ -9,7 +9,6 @@ urlpatterns = [
     path('competitions/<int:pk>/delete/', views.CompetitionDeleteView.as_view(), name='competition-delete'),
     path('competitions/<int:pk>/manage/', views.competition_management, name='competition-management'),
     path('competitions/<int:pk>/statistics/', views.competition_statistics, name='competition-statistics'),
-    
     path('import/codeforces/', views.codeforces_import, name='codeforces-import'),
     path('import/yandex/', views.yandex_contest_import, name='yandex-import'),
 ]

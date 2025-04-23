@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Сдать решение для {{ competition.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">
+            Посылки для {{ competition.title }}
+        </h1>
+        <a href="{% url 'competition-detail' competition.id %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i> Назад к контесту
+        </a>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">{{ competition.title }}</h2>
+        </div>
+        <div class="card-body">
+            <p>{{ competition.description|truncatewords:50 }}</p>
+            <div class="d-flex justify-content-between">
+                <p class="mb-0">
+                    <i class="bi bi-calendar"></i> {{ competition.start_date|date:"M d, Y" }} - {{ competition.end_date|date:"M d, Y" }}
+                </p>
+                {% if competition.start_date <= today and competition.end_date >= today %}
+                <span class="badge bg-success">Активный</span>
+                {% elif competition.start_date > today %}
+                <span class="badge bg-info">Предстоящий</span>
+                {% else %}
+                <span class="badge bg-secondary">Завершенный</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if is_admin %}
+    <!-- Admin Dashboard -->
+    <div class="row mb-4">
+        <!-- Submission Statistics by Problem -->
+        <div class="col-md-6">
+            <div class="card mb-4 h-100">
+                <div class="card-header bg-light">
+                    <h2 class="h5 mb-0">Статистика задач</h2>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Задача</th>
+                                    <th>Всего</th>
+                                    <th>Приятно</th>
+                                    <th>Процент</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in problem_stats %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'problem-detail' stat.problem.problem_id %}">
+                                            {{ stat.problem.title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ stat.total }}</td>
+                                    <td>{{ stat.accepted }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ stat.acceptance_rate }}%;" 
+                                                aria-valuenow="{{ stat.acceptance_rate }}" aria-valuemin="0" aria-valuemax="100">
+                                                {{ stat.acceptance_rate|floatformat:1 }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Statistics -->
+        <div class="col-md-6">
+            <div class="card mb-4 h-100">
+                <div class="card-header bg-light">
+                    <h2 class="h5 mb-0">Топ участников</h2>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Пользователь</th>
+                                    <th>Всего</th>
+                                    <th>Принято</th>
+                                    <th>Процент</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user_stat in user_stats|slice:":10" %}
+                                <tr>
+                                    <td>{{ user_stat.user__username }}</td>
+                                    <td>{{ user_stat.total_submissions }}</td>
+                                    <td>{{ user_stat.accepted_submissions }}</td>
+                                    <td>
+                                        {% if user_stat.total_submissions > 0 %}
+                                        {{ user_stat.accepted_submissions|multiply:100|divide:user_stat.total_submissions|floatformat:1 }}%
+                                        {% else %}
+                                        0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'submission-leaderboard' competition.id %}" class="btn btn-sm btn-outline-primary">
+                        Просмотр полного лидерборда
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Submission List -->
+    <div class="card">
+        <div class="card-header bg-light">
+            <h2 class="h5 mb-0">
+                {% if is_admin %}
+                Все посылки
+                {% else %}
+                Ваши посылки
+                {% endif %}
+            </h2>
+        </div>
+        <div class="card-body p-0">
+            {% if submissions %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            {% if is_admin %}
+                            <th>Пользователь</th>
+                            {% endif %}
+                            <th>Задача</th>
+                            <th>Статус</th>
+                            <th>Сдано</th>
+                            <th>Действие</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for submission in submissions %}
+                        <tr>
+                            <td>{{ submission.submission_id }}</td>
+                            {% if is_admin %}
+                            <td>{{ submission.user.username }}</td>
+                            {% endif %}
+                            <td>
+                                <a href="{% url 'problem-detail' submission.problem.problem_id %}">
+                                    {{ submission.problem.title }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if submission.status == 'accepted' %}
+                                <span class="badge bg-success">Принято</span>
+                                {% elif submission.status == 'pending' %}
+                                <span class="badge bg-info">Ожидание</span>
+                                {% else %}
+                                <span class="badge bg-danger">Отклонено</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ submission.submitted_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'submission-detail' submission.submission_id %}" class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center p-4">
+                <p class="lead mb-0">Для данного контеста не найдено посылок.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

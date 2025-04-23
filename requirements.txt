@@ -3,3 +3,4 @@ psycopg2==2.9.10
 django-crispy-forms==2.3
 crispy-bootstrap5==2024.10
 celery==5.4.0
+Pillow==11.2.1

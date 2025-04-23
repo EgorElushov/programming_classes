@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Запись на {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Запись на {{ course.title }}</h1>
+        <a href="{% url 'add-students' course.course_id %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Добавить студентов
+        </a>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        Студентов: ({{ enrollment_count }})
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if enrollments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Имя</th>
+                                    <th>Email</th>
+                                    <th>Записан</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for enrollment in enrollments %}
+                                <tr>
+                                    <td>{{ enrollment.user.username }}</td>
+                                    <td>{{ enrollment.user.email }}</td>
+                                    <td>{{ enrollment.enrolled_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <form method="post" action="{% url 'manage-enrollment' enrollment.enrollment_id 'remove' %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Вы уверены, что хотите удалить этого студента?')">
+                                                <i class="bi bi-trash"></i> Удалить
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="p-4 text-center">
+                        <p>На этот курс еще не записан ни один студент.</p>
+                        <a href="{% url 'add-students' course.course_id %}" class="btn btn-primary">
+                            <i class="bi bi-person-plus"></i> Добавить студентов
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'course-detail' course.course_id %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к курсу
+        </a>
+        <a href="{% url 'course-statistics' course.course_id %}" class="btn btn-outline-primary">
+            <i class="bi bi-graph-up"></i> Просмотр статистики курса
+        </a>
+    </div>
+</div>
+{% endblock %}

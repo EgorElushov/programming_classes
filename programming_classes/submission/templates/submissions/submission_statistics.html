@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Статистика посылок{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Статистика посылок</h1>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Всего посылок</h5>
+                    <p class="display-4">{{ total_submissions }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Посылки по статусам</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for stat in status_stats %}
+                        <div class="col-md-4 text-center mb-3">
+                            {% if stat.status == 'accepted' %}
+                            <div class="p-3 bg-success text-white rounded">
+                                <h3 class="h2">{{ stat.count }}</h3>
+                                <p class="mb-0">Принятых</p>
+                            </div>
+                            {% elif stat.status == 'pending' %}
+                            <div class="p-3 bg-info text-white rounded">
+                                <h3 class="h2">{{ stat.count }}</h3>
+                                <p class="mb-0">Ожидающих</p>
+                            </div>
+                            {% else %}
+                            <div class="p-3 bg-danger text-white rounded">
+                                <h3 class="h2">{{ stat.count }}</h3>
+                                <p class="mb-0">Отклоненных</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Daily Submissions Chart -->
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Посылки за последнии 30 дней</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="submissionsChart" height="250"></canvas>
+                </div>
+            </div>
+            
+            <!-- Top Problems -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Наиболее решаемые задачи</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Задача</th>
+                                    <th>Посылок</th>
+                                    <th>Контест</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for problem in top_problems %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <a href="{% url 'problem-detail' problem.problem_id %}">
+                                            {{ problem.title }}
+                                        </a>
+                                    </td>
+                                    <td>{{ problem.submission_count }}</td>
+                                    <td>
+                                        <a href="{% url 'competition-detail' problem.competition.id %}">
+                                            {{ problem.competition.title }}
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Most Active Users -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">НАиболее активные пользователи</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for user_stat in most_active_users %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">{{ user_stat.user__username }}</h6>
+                                    <small class="text-muted">ID: {{ user_stat.user__id }}</small>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">{{ user_stat.submission_count }}</span>
+                            </div>
+                            <div class="progress mt-2" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar" 
+                                    style="width: {{ user_stat.submission_count|multiply:100|divide:most_active_users.0.submission_count }}%;" 
+                                    aria-valuenow="{{ user_stat.submission_count }}" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="{{ most_active_users.0.submission_count }}">
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'submission-list' %}" class="btn btn-sm btn-outline-primary w-100">
+                        Просмотр всех решений
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js for visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Submissions Over Time Chart
+        var ctx = document.getElementById('submissionsChart').getContext('2d');
+        
+        var dates = [
+            {% for entry in daily_submissions %}
+            "{{ entry.day|date:'M d, Y' }}",
+            {% endfor %}
+        ];
+        
+        var counts = [
+            {% for entry in daily_submissions %}
+            {{ entry.count }},
+            {% endfor %}
+        ];
+        
+        var submissionsChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Daily Submissions',
+                    data: counts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Submission Activity'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

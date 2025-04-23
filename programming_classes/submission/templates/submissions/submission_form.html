@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Сдать решение - {{ problem.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h1 class="h3 mb-0">Сдать решение</h1>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5>Problem: {{ problem.title }}</h5>
+                        <p class="text-muted">
+                            <small>
+                                <i class="bi bi-trophy"></i> 
+                                Контест: <a href="{% url 'competition-detail' competition.id %}" class="text-reset">{{ competition.title }}</a>
+                            </small>
+                        </p>
+                    </div>
+                    
+                    <form method="post" action="{% url 'create-submission' problem.problem_id %}">
+                        {% csrf_token %}
+                        
+                        {{ form|crispy }}
+                        
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Ваше решение будет автоматически оценено. Результаты будут доступны на странице решения.
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'problem-detail' problem.problem_id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Назад к задаче
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send"></i> Сдать
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Initialize code editor -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/python/python.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var codeEditor = CodeMirror.fromTextArea(document.getElementById('id_code'), {
+            lineNumbers: true,
+            indentUnit: 4,
+            mode: 'text/x-python',
+            theme: 'default',
+            lineWrapping: true,
+            autofocus: true
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Удаление задачи{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h1 class="h3 mb-0">Подтвердите удаление</h1>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Вы уверены, что хотите удалить задачу "{{ problem.title }}"?</p>
+                    <p class="text-danger">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Это действие невозможно отменить. Все посылки, связанные с этой задачей, будут удалены безвозвратно.
+                    </p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'problem-detail' problem.problem_id %}" class="btn btn-secondary me-md-2">Отменить</a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash me-2"></i>Удалить задачу
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}EduCode - Платформа для обучения{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="bg-dark text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h1 class="display-4 fw-bold">Учитесь программировать, преодолевая трудности</h1>
+                <p class="lead">EduCode предлагает комплексную платформу для изучения программирования, участия в конкурсах и совершенствования ваших навыков программирования.</p>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'problem-list' %}" class="btn btn-primary btn-lg px-4 me-md-2">Исследуйте задачи</a>
+                    <a href="{% url 'my-courses' %}" class="btn btn-outline-light btn-lg px-4">Мои курсы</a>
+                    {% else %}
+                    <a href="{% url 'register' %}" class="btn btn-primary btn-lg px-4 me-md-2">Начать</a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-light btn-lg px-4">Вход</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <img src="https://via.placeholder.com/600x400?text=Code+Learning" class="img-fluid rounded" alt="Coding illustration">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">Особенности платформы</h2>
+        <p class="lead">Все, что вам нужно для улучшения ваших навыков программирования</p>
+    </div>
+    
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-trophy text-primary" style="font-size: 3rem;"></i>
+                    <h3 class="card-title mt-3">Контесты</h3>
+                    <p class="card-text">Участвуйте в соревнованиях по программированию, получая отзывы и рейтинги в режиме реального времени.</p>
+                    <a href="{% url 'competition-list' %}" class="btn btn-outline-primary mt-2">Просмотр контестов</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-puzzle text-success" style="font-size: 3rem;"></i>
+                    <h3 class="card-title mt-3">Задачи</h3>
+                    <p class="card-text">Потренируйтесь с большой коллекцией задач по программированию, отсортированных по степени сложности.</p>
+                    <a href="{% url 'problem-list' %}" class="btn btn-outline-success mt-2">Решать</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="bi bi-book text-info" style="font-size: 3rem;"></i>
+                    <h3 class="card-title mt-3">Курсы</h3>
+                    <p class="card-text">Учитесь на структурированных курсах, охватывающих концепции и методы программирования.</p>
+                    <a href="{% url 'course-list' %}" class="btn btn-outline-info mt-2">Найти свой курс</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Competitions -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">Активные контесты</h2>
+            <p class="lead">Проверьте свои навыки против других в наших постоянных соревнованиях</p>
+        </div>
+        
+        {% if active_competitions %}
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            {% for competition in active_competitions %}
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ competition.title }}</h5>
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ competition.description|truncatechars:150 }}</p>
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">
+                                <i class="bi bi-calendar"></i> До: {{ competition.end_date|date:"M d, Y" }}
+                            </small>
+                            <small class="text-muted">
+                                <i class="bi bi-people"></i> {{ competition.participants.count }} участники
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'competition-detail' competition.id %}" class="btn btn-outline-primary w-100">Просмотр контеста</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center">
+            <p class="lead mb-4">На данный момент активных соревнований нет.</p>
+            <a href="{% url 'competition-list' %}" class="btn btn-primary">Просмотреть все контесты</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Featured Courses -->
+<div class="container py-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold">Рекомендуемые курсы</h2>
+        <p class="lead">Начните обучение с наших самых популярных курсов программирования</p>
+    </div>
+    
+    {% if featured_courses %}
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for course in featured_courses %}
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ course.title }}</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ course.description|truncatechars:150 }}</p>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">
+                            <i class="bi bi-person"></i> {{ course.created_by.username }}
+                        </small>
+                        <small class="text-muted">
+                            <i class="bi bi-people"></i> {{ course.enrollments.count }} учится
+                        </small>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{% url 'course-detail' course.course_id %}" class="btn btn-outline-primary w-100">Просмотр курса</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center">
+        <p class="lead mb-4">На данный момент никаких рекомендуемых курсов нет.</p>
+        <a href="{% url 'course-list' %}" class="btn btn-primary">Просмотрите все курсы</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Call to Action -->
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card bg-primary text-white">
+                <div class="card-body p-5 text-center">
+                    <h2 class="fw-bold mb-3">Готовы улучшить свои навыки программирования?</h2>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'problem-list' %}" class="btn btn-light btn-lg">Начать решать</a>
+                    {% else %}
+                    <a href="{% url 'register' %}" class="btn btn-light btn-lg">Зарегистрируйся сейчас</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
