@@ -12,6 +12,7 @@ from .models import Submission
 from problem.models import Problem
 from competition.models import Competition
 from .forms import SubmissionForm
+from checker.tasks import check_submission as check_submission_task
 
 
 class SubmissionListView(LoginRequiredMixin, ListView):
@@ -115,11 +116,9 @@ def create_submission(request, problem_id):
     competition = problem.competition
     today = timezone.now().date()
     is_active = competition.start_date <= today <= competition.end_date
-
     if not is_active and not request.user.is_staff:
         messages.error(request, "Контест закрыт. Посылки не принимаются.")
         return redirect('problem-detail', problem_id=problem_id)
-
     if request.method == 'POST':
         form = SubmissionForm(request.POST)
         if form.is_valid():
@@ -129,8 +128,9 @@ def create_submission(request, problem_id):
             submission.status = 'pending'
             submission.save()
 
-            messages.success(request, "Ваша посылка была получена и в настоящее время обрабатывается.")
+            check_submission_task.delay(submission.submission_id)
 
+            messages.success(request, "Ваше решение принято и находится в процессе проверки.")
             return redirect('submission-detail', submission_id=submission.submission_id)
     else:
         form = SubmissionForm()
@@ -148,7 +148,6 @@ def create_submission(request, problem_id):
 
 @login_required
 def update_submission_status(request, submission_id):
-    """View function for updating a submission's status (admin/staff only)"""
     submission = get_object_or_404(Submission, submission_id=submission_id)
 
     # Check if user has permission to update this submission

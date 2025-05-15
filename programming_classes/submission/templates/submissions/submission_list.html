@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
-{% load math_filters %}
+{% load mathfilters %}
 
 {% block title %}Решения{% endblock %}
 
@@ -32,7 +32,7 @@
             <div class="card bg-danger text-white">
                 <div class="card-body">
                     <h5 class="card-title">Отклонено</h5>
-                    <p class="display-4">{{ total_submissions|subtract:accepted_submissions }}</p>
+                    <p class="display-4">{{ total_submissions|sub:accepted_submissions }}</p>
                 </div>
             </div>
         </div>
@@ -42,7 +42,7 @@
                     <h5 class="card-title">Процент</h5>
                     <p class="display-4">
                         {% if total_submissions > 0 %}
-                        {{ accepted_submissions|multiply:100|divide:total_submissions|floatformat:1 }}%
+                        {{ accepted_submissions|mul:100|div:total_submissions|floatformat:1 }}%
                         {% else %}
                         0%
                         {% endif %}

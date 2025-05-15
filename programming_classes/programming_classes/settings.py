@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'main',
     'problem',
     'submission',
+    'checker',
+    'mathfilters',
 ]
 
 CRISPY_TEMPLATE_PACK = "bootstrap5"
@@ -88,17 +90,32 @@ WSGI_APPLICATION = 'programming_classes.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'evelushov',
-        'USER': 'evelushov',
-        'PASSWORD': 'evelushov',
-        'HOST': 'localhost',
-        'PORT': '5432',
+if DEBUG == True:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': 'evelushov',
+            'USER': 'evelushov',
+            'PASSWORD': 'evelushov',
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': 'evelushov',
+            'USER': 'evelushov',
+            'PASSWORD': 'evelushov',
+            'HOST': 'rc1a-lkbi83ye0uu2l48i.mdb.yandexcloud.net',
+            'PORT': '6432',
+            'OPTIONS': {
+                'sslmode': 'verify-full',
+                'target_session_attrs': 'read-write',
+            },
+        }
+    }
 
 
 # Password validation
@@ -158,12 +175,58 @@ LOGOUT_REDIRECT_URL = 'home'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',  # Required for admin
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',  # Required for admin
-    'django.contrib.messages.middleware.MessageMiddleware',  # Required for admin
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    # Custom middleware can go here
-    'accounts.middleware.RoleMiddleware',  # Your custom middleware
+    'accounts.middleware.RoleMiddleware',
 ]
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+import os
+import platform
+import subprocess
+
+def get_colima_socket():
+    docker_host = os.environ.get('DOCKER_HOST')
+    if docker_host and docker_host.startswith('unix://'):
+        return docker_host
+    
+    try:
+        result = subprocess.run(['colima', 'status'], capture_output=True, text=True)
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                if 'Socket:' in line:
+                    socket_info = line.split('Socket:')[1].strip()
+                    if socket_info.startswith('unix://'):
+                        return socket_info
+    except Exception as e:
+        pass
+    
+    home_dir = os.path.expanduser('~')
+    return f"unix:///{home_dir}/.colima/default/docker.sock"
+
+if platform.system() == 'Darwin':
+    try:
+        colima_check = subprocess.run(['colima', 'status'], capture_output=True, text=True)
+        using_colima = colima_check.returncode == 0
+    except FileNotFoundError:
+        using_colima = False
+    
+    if using_colima:
+        DOCKER_BASE_URL = get_colima_socket()
+    else:
+        DOCKER_BASE_URL = 'unix:///var/run/docker.sock'
+elif platform.system() == 'Linux':
+    DOCKER_BASE_URL = 'unix:///var/run/docker.sock'
+elif platform.system() == 'Windows':
+    DOCKER_BASE_URL = 'npipe:////./pipe/docker_engine'
+else:
+    DOCKER_BASE_URL = None

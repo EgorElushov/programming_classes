@@ -25,4 +25,7 @@ urlpatterns = [
     path(
         'api/competitions/<int:competition_id>/problems/import/', views.import_problems_api, name='import-problems-api'
     ),
+    path('problems/<int:problem_id>/tests/', views.manage_test_cases, name='manage-test-cases'),
+    path('testcase/<int:test_id>/edit/', views.edit_test_case, name='edit-test-case'),
+    path('testcase/<int:test_id>/delete/', views.delete_test_case, name='delete-test-case'),
 ]

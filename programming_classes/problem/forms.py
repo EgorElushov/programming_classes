@@ -1,5 +1,5 @@
 from django import forms
-from .models import Problem
+from .models import Problem, TestCase
 from competition.models import Competition
 
 
@@ -29,3 +29,18 @@ class ProblemForm(forms.ModelForm):
         self.fields['difficulty'].widget = forms.Select(
             choices=[('Easy', 'Easy'), ('Medium', 'Medium'), ('Hard', 'Hard'), ('Expert', 'Expert')]
         )
+
+class TestCaseForm(forms.ModelForm):
+    class Meta:
+        model = TestCase
+        fields = ['input_data', 'expected_output', 'is_sample', 'order', 'points']
+        widgets = {
+            'input_data': forms.Textarea(attrs={'rows': 5, 'required': False}),
+            'expected_output': forms.Textarea(attrs={'rows': 5}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Делаем поле необязательным
+        self.fields['input_data'].required = False
+

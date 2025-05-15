@@ -50,9 +50,9 @@
                             <a href="{% url 'competition-delete' competition.id %}" class="btn btn-danger">
                                 <i class="bi bi-trash"></i> Удалить
                             </a>
-                        {% elif is_active %}
-                            <a href="{% url 'competition-detail' competition.id %}" class="btn btn-success">
-                                <i class="bi bi-person-plus"></i> Присоединиться
+                        {% elif is_active and not is_participant %}
+                            <a class="btn btn-primary" href="javascript:void(0);" onclick="joinCompetition()">
+                                <i></i> Присоединиться
                             </a>
                         {% endif %}
                     {% else %}
@@ -177,9 +177,7 @@
                             <tbody>
                                 {% for participant in standings %}
                                 <tr {% if participant.user == user %}class="table-primary"{% endif %}>
-                                    <td>{{ participant.rank|default:forloop.counter }}</td>
                                     <td>{{ participant.user.username }}</td>
-                                    <td>{{ participant.score }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -246,5 +244,34 @@
         }, 1000);
     });
 </script>
+<script>
+    // Существующий код с обратным отсчетом...
+
+    function joinCompetition() {
+        // Создаем форму
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{% url 'competition-detail' competition.id %}";
+        
+        // Добавляем CSRF-токен
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = '{{ csrf_token }}';
+        form.appendChild(csrfToken);
+        
+        // Добавляем скрытое поле для обозначения действия
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = 'join_competition';
+        form.appendChild(actionInput);
+        
+        // Добавляем форму на страницу и отправляем
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+
 {% endif %}
 {% endblock %}

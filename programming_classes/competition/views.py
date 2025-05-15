@@ -10,6 +10,7 @@ from django.urls import reverse_lazy
 from .models import Competition
 from .forms import CompetitionForm
 from problem.models import Problem
+from submission.models import Submission
 
 
 class CompetitionListView(ListView):
@@ -49,20 +50,74 @@ class CompetitionDetailView(DetailView):
     model = Competition
     template_name = 'contests/competition_detail.html'
     context_object_name = 'competition'
+    
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+            
+        competition = self.get_object()
+        today = timezone.now().date()
+        is_active = competition.start_date <= today <= competition.end_date
+        
+        if not is_active:
+            messages.error(request, "Невозможно присоединиться к неактивному соревнованию.")
+            return redirect('competition-detail', pk=competition.pk)
+            
+        if request.user in competition.partisipants.all():
+            messages.info(request, "Вы уже участвуете в этом соревновании.")
+        else:
+            competition.partisipants.add(request.user)
+            messages.success(request, "Вы успешно присоединились к соревнованию!")
+            
+        return redirect('competition-detail', pk=competition.pk)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         competition = self.get_object()
+        
         context['problems'] = Problem.objects.filter(competition=competition)
+        
         today = timezone.now().date()
-
         context['today'] = today
-
+        
         context['is_active'] = competition.start_date <= today <= competition.end_date
-
+        
+        participants = competition.partisipants.all().order_by('email')
+        
+        standings = []
+        for participant in participants:
+            score = 0
+            
+            standings.append({
+                'user': participant,
+                'score': score
+            })
+        
+        standings = sorted(standings, key=lambda x: x['score'], reverse=True)
+        context['standings'] = standings
+        
+        # Проверка, является ли пользователь участником и добавление данных участия
         if self.request.user.is_authenticated:
-            context['can_edit'] = self.request.user == competition.user or self.request.user.is_staff
-
+            context['is_participant'] = self.request.user in participants
+            
+            # Проверка прав на редактирование
+            context['can_edit'] = (self.request.user == competition.user or 
+                                 self.request.user.is_staff)
+            
+            # Инициализация participation как None
+            context['participation'] = None
+            
+            # Поиск текущего пользователя в таблице лидеров
+            for i, entry in enumerate(standings):
+                if entry['user'] == self.request.user:
+                    participation = {
+                        'user': self.request.user,
+                        'score': entry['score'],
+                        'rank': i + 1
+                    }
+                    context['participation'] = participation
+                    break
+        
         return context
 
 

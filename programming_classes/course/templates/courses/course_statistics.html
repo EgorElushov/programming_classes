@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+{% load mathfilters %}
 
 {% block title %}Статистика - {{ course.title }}{% endblock %}
 
@@ -108,9 +109,9 @@
                                     <td>{{ month.count }}</td>
                                     <td>
                                         {% if forloop.counter0 > 0 %}
-                                            {% with prev_count=enrollment_trend|index:forloop.counter0|subtract:1|get:"count" %}
+                                            {% with prev_count=enrollment_trend|sub:1 %}
                                                 {% if prev_count > 0 %}
-                                                    {% with growth=month.count|subtract:prev_count|multiply:100|divide:prev_count %}
+                                                    {% with growth=month.count|sub:prev_count|mul:100|div:prev_count %}
                                                         {% if growth > 0 %}
                                                             <span class="text-success">
                                                                 <i class="bi bi-arrow-up"></i> {{ growth|floatformat:1 }}%
@@ -185,13 +186,13 @@
                                         <div class="d-flex align-items-center">
                                             <div class="progress flex-grow-1 me-2" style="height: 8px;">
                                                 <div class="progress-bar" role="progressbar" 
-                                                    style="width: {{ type.count|multiply:100|divide:material_count }}%;" 
+                                                    style="width: {{ type.count|mul:100|div:material_count }}%;" 
                                                     aria-valuenow="{{ type.count }}" 
                                                     aria-valuemin="0" 
                                                     aria-valuemax="{{ material_count }}">
                                                 </div>
                                             </div>
-                                            <span>{{ type.count|multiply:100|divide:material_count|floatformat:1 }}%</span>
+                                            <span>{{ type.count|mul:100|div:material_count|floatformat:1 }}%</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -218,7 +219,7 @@
                 <div class="col-md-6">
                     <h5>Ключевые идеи</h5>
                     <ul>
-                        <li>CТекущая запись: <strong>{{ total_enrollments }} студентов</strong></li>
+                        <li>Текущая запись: <strong>{{ total_enrollments }} студентов</strong></li>
                         <li>Доступные материалы: <strong>{{ material_count }} ресурсов</strong></li>
                         {% if enrollment_trend %}
                         <li>
@@ -270,11 +271,9 @@
                         {% endif %}
                         
                         {% if enrollment_trend %}
-                            {% with last_month=enrollment_trend|last previous_month=enrollment_trend|index:-2 %}
                                 {% if last_month.count < previous_month.count %}
                                 <li>Число учащихся сокращается - подумайте о том, чтобы обновить содержание курса</li>
                                 {% endif %}
-                            {% endwith %}
                         {% endif %}
                     </ul>
                 </div>

@@ -74,10 +74,15 @@
                     <a href="{% url 'problem-submissions' problem.problem_id %}" class="btn btn-info">
                         <i class="bi bi-list-check"></i> Просмотр посылок
                     </a>
+                    {% if can_edit %}
+                    <a href="{% url 'manage-test-cases' problem.problem_id %}" class="btn btn-outline-primary">
+                        <i class="bi bi-list-check"></i> Управление тестами
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
-
+        
         <!-- Submission Form -->
         <div class="col-md-4">
             {% if user.is_authenticated %}
@@ -98,7 +103,7 @@
                             <select name="language" id="language" class="form-select" required>
                                 <option value="">Выбери язык</option>
                                 {% for lang in programming_languages %}
-                                <option value="{{ lang.id }}">{{ lang.name }}</option>
+                                <option value="{{ lang.0 }}">{{ lang.1 }}</option>
                                 {% endfor %}
                             </select>
                         </div>

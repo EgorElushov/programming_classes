@@ -107,7 +107,7 @@
                                     <td>{{ user_stat.accepted_submissions }}</td>
                                     <td>
                                         {% if user_stat.total_submissions > 0 %}
-                                        {{ user_stat.accepted_submissions|multiply:100|divide:user_stat.total_submissions|floatformat:1 }}%
+                                        {{ user_stat.accepted_submissions|mul:100|div:user_stat.total_submissions|floatformat:1 }}%
                                         {% else %}
                                         0%
                                         {% endif %}

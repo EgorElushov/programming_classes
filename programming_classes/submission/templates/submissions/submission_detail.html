@@ -136,7 +136,7 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <h6>Status</h6>
+                        <h6>Статус</h6>
                         {% if submission.status == 'accepted' %}
                         <div class="alert alert-success">
                             <i class="bi bi-check-circle"></i> Принята
@@ -210,6 +210,99 @@
                 </div>
             </div>
         </div>
+        {% if submission.test_results.all %}
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Результаты тестов</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Статус</th>
+                                <th>Время</th>
+                                <th>Память</th>
+                                <th>Детали</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in submission.test_results.all %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    {% if result.result == 'AC' %}
+                                    <span class="badge bg-success">Принято</span>
+                                    {% elif result.result == 'WA' %}
+                                    <span class="badge bg-danger">Неверный ответ</span>
+                                    {% elif result.result == 'TLE' %}
+                                    <span class="badge bg-warning">Превышено время</span>
+                                    {% elif result.result == 'MLE' %}
+                                    <span class="badge bg-warning">Превышена память</span>
+                                    {% elif result.result == 'RE' %}
+                                    <span class="badge bg-danger">Ошибка выполнения</span>
+                                    {% elif result.result == 'CE' %}
+                                    <span class="badge bg-danger">Ошибка компиляции</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">{{ result.get_result_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ result.execution_time|default_if_none:"-" }} мс</td>
+                                <td>{{ result.memory_used|default_if_none:"-" }} КБ</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-info" 
+                                            data-bs-toggle="modal" data-bs-target="#testModal{{ result.id }}">
+                                        <i class="bi bi-info-circle"></i> Подробнее
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальные окна с деталями тестов -->
+        {% for result in submission.test_results.all %}
+        <div class="modal fade" id="testModal{{ result.id }}" tabindex="-1" aria-labelledby="testModalLabel{{ result.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="testModalLabel{{ result.id }}">Тест #{{ forloop.counter }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Входные данные</h6>
+                                <pre class="bg-light p-2 rounded"><code>{{ result.test_case.input_data }}</code></pre>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Ожидаемый вывод</h6>
+                                <pre class="bg-light p-2 rounded"><code>{{ result.test_case.expected_output }}</code></pre>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h6>Ваш вывод</h6>
+                            <pre class="bg-light p-2 rounded"><code>{{ result.output }}</code></pre>
+                        </div>
+                        {% if result.error_message %}
+                        <div class="mb-3">
+                            <h6>Сообщение об ошибке</h6>
+                            <pre class="bg-danger bg-opacity-10 p-2 rounded text-danger"><code>{{ result.error_message }}</code></pre>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
     </div>
 </div>
 

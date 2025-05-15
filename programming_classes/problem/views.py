@@ -9,7 +9,9 @@ from django.db.models import Q
 
 from .models import Problem
 from competition.models import Competition
-from .forms import ProblemForm
+from .forms import ProblemForm, TestCaseForm
+from problem.models import TestCase
+from checker.consts import PROGRAMMING_LANGUAGES
 
 
 class ProblemListView(ListView):
@@ -64,11 +66,25 @@ class ProblemDetailView(DetailView):
     context_object_name = 'problem'
     pk_url_kwarg = 'problem_id'
 
+    def post(self, request, *args, **kwargs):
+        problem = self.get_object()
+
+        if request.user.is_authenticated:
+            if request.POST.get('action') == 'solve':
+                problem.solve(request.user)
+                messages.success(request, 'Рeшение задачи успешно добавлено')
+            elif request.POST.get('action') == 'unsolve':
+                problem.unsolve(request.user)
+                messages.success(request, 'Решение задачи успешно удалено')
+
+        return redirect(reverse('problem_detail', kwargs={'problem_id': problem.pk}))
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         problem = self.get_object()
 
         context['competition'] = problem.competition
+        context['programming_languages'] = PROGRAMMING_LANGUAGES
 
         if self.request.user.is_authenticated:
             context['can_edit'] = self.request.user == problem.competition.user or self.request.user.is_staff
@@ -304,3 +320,75 @@ def import_problems_api(request, competition_id):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Только POST метод'}, status=405)
+
+
+@login_required
+def manage_test_cases(request, problem_id):
+    problem = get_object_or_404(Problem, problem_id=problem_id)
+
+    # Проверяем права доступа
+    if not (request.user == problem.competition.user or request.user.is_staff):
+        return HttpResponseForbidden("У вас нет прав для управления тестами")
+
+    # Получаем все тестовые случаи
+    test_cases = TestCase.objects.filter(problem=problem).order_by('order')
+
+    if request.method == 'POST':
+        form = TestCaseForm(request.POST)
+        if form.is_valid():
+            test_case = form.save(commit=False)
+            test_case.problem = problem
+            test_case.save()
+            messages.success(request, "Тестовый случай создан успешно")
+            return redirect('manage-test-cases', problem_id=problem_id)
+    else:
+        form = TestCaseForm()
+
+    return render(
+        request,
+        'problems/manage_test_cases.html',
+        {
+            'problem': problem,
+            'test_cases': test_cases,
+            'form': form,
+        },
+    )
+
+
+@login_required
+def edit_test_case(request, test_id):
+    test_case = get_object_or_404(TestCase, id=test_id)
+    problem = test_case.problem
+
+    # Проверяем права доступа
+    if not (request.user == problem.competition.user or request.user.is_staff):
+        return HttpResponseForbidden("У вас нет прав для редактирования тестов")
+
+    if request.method == 'POST':
+        form = TestCaseForm(request.POST, instance=test_case)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Тестовый случай обновлен успешно")
+            return redirect('manage-test-cases', problem_id=problem.problem_id)
+    else:
+        form = TestCaseForm(instance=test_case)
+
+    return render(request, 'problem/edit_test_case.html', {'form': form, 'test_case': test_case, 'problem': problem})
+
+
+@login_required
+def delete_test_case(request, test_id):
+    test_case = get_object_or_404(TestCase, id=test_id)
+    problem = test_case.problem
+
+    # Проверяем права доступа
+    if not (request.user == problem.competition.user or request.user.is_staff):
+        return HttpResponseForbidden("У вас нет прав для удаления тестов")
+
+    if request.method == 'POST':
+        problem_id = problem.problem_id
+        test_case.delete()
+        messages.success(request, "Тестовый случай удален успешно")
+        return redirect('manage-test-cases', problem_id=problem_id)
+
+    return redirect('manage-test-cases', problem_id=problem.problem_id)

@@ -4,10 +4,6 @@ from problem.models import Problem
 
 
 class Submission(models.Model):
-    """
-    Django model representing the Submissions table
-    """
-
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('accepted', 'Accepted'),
@@ -22,6 +18,7 @@ class Submission(models.Model):
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, null=False)
 
     submitted_at = models.DateTimeField(auto_now_add=True)
+    programming_language = models.CharField(max_length=50, null=True, blank=True)
 
     class Meta:
         # Optional: Add any additional metadata

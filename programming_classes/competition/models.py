@@ -8,6 +8,7 @@ class Competition(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     user = models.ForeignKey(Account, on_delete=models.CASCADE)
+    partisipants = models.ManyToManyField(Account, related_name='competitions')
 
     def __str__(self):
         return self.title

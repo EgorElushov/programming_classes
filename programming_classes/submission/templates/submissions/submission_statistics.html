@@ -109,7 +109,7 @@
         <div class="col-md-4">
             <div class="card mb-4">
                 <div class="card-header bg-light">
-                    <h5 class="mb-0">НАиболее активные пользователи</h5>
+                    <h5 class="mb-0">Наиболее активные пользователи</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
@@ -124,7 +124,7 @@
                             </div>
                             <div class="progress mt-2" style="height: 6px;">
                                 <div class="progress-bar" role="progressbar" 
-                                    style="width: {{ user_stat.submission_count|multiply:100|divide:most_active_users.0.submission_count }}%;" 
+                                    style="width: {{ user_stat.submission_count|mul:100|div:most_active_users.0.submission_count }}%;" 
                                     aria-valuenow="{{ user_stat.submission_count }}" 
                                     aria-valuemin="0" 
                                     aria-valuemax="{{ most_active_users.0.submission_count }}">

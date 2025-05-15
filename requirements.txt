@@ -4,3 +4,6 @@ django-crispy-forms==2.3
 crispy-bootstrap5==2024.10
 celery==5.4.0
 Pillow==11.2.1
+docker==7.1.0
+django-mathfilters==1.0.0
+redis==4.3.4
